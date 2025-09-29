@@ -6,10 +6,13 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rahulcodepython/todo-backend/backend/config"
+	"github.com/rahulcodepython/todo-backend/backend/database"
 )
 
 func main() {
 	cfg := config.LoadConfig()
+
+	database.ConnectDB(cfg)
 
 	server := fiber.New()
 
