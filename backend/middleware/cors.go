@@ -3,14 +3,15 @@ package middleware
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/rahulcodepython/todo-backend/backend/config"
 )
 
-func CorsRestriction() fiber.Handler {
+func Cors(cfg *config.Config) fiber.Handler {
 	return cors.New(cors.Config{
-		AllowOrigins: "https://your-production-domain.com",
+		AllowOrigins: cfg.CORS.CorsOrigins,
 		AllowHeaders: "Origin, Content-Type, Accept",
 		Next: func(c *fiber.Ctx) bool {
-			return c.IP() == "127.0.0.1"
+			return c.IP() == cfg.Server.Host
 		},
 	})
 }

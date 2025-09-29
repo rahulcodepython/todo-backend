@@ -28,11 +28,16 @@ type JWTConfig struct {
 	Expires   time.Duration
 }
 
+type CORSConfig struct {
+	CorsOrigins string
+}
+
 type Config struct {
 	Environment string
 	Server      ServerConfig
 	Database    DatabaseConfig
 	JWT         JWTConfig
+	CORS        CORSConfig
 }
 
 func HandleMissingEnvValues(envName string, defaultValue string) string {
@@ -77,6 +82,9 @@ func LoadConfig() *Config {
 		JWT: JWTConfig{
 			SecretKey: HandleMissingEnvValues("JWT_SECRET_KEY", "vCYKhw6zTyXIt7ckaKNnv7KarP2wzhZegyoxLLiK6MGKTnVo9z"),
 			Expires:   time.Hour * time.Duration(expiry),
+		},
+		CORS: CORSConfig{
+			CorsOrigins: HandleMissingEnvValues("CORS_ORIGINS", "http://localhost:3000"),
 		},
 	}
 }

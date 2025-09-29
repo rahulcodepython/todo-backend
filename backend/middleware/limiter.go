@@ -5,9 +5,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/rahulcodepython/todo-backend/backend/config"
 )
 
-func GeneralAPILimiter() fiber.Handler {
+func GeneralAPILimiter(cfg *config.Config) fiber.Handler {
 	return limiter.New(limiter.Config{
 		Max:               60,
 		Expiration:        1 * time.Minute,
@@ -19,12 +20,12 @@ func GeneralAPILimiter() fiber.Handler {
 			})
 		},
 		Next: func(c *fiber.Ctx) bool {
-			return c.IP() == "127.0.0.1"
+			return c.IP() == cfg.Server.Host
 		},
 	})
 }
 
-func StrictSecurityLimiter() fiber.Handler {
+func StrictSecurityLimiter(cfg *config.Config) fiber.Handler {
 	return limiter.New(limiter.Config{
 		Max:                    5,
 		Expiration:             10 * time.Minute,
@@ -36,7 +37,7 @@ func StrictSecurityLimiter() fiber.Handler {
 			})
 		},
 		Next: func(c *fiber.Ctx) bool {
-			return c.IP() == "127.0.0.1"
+			return c.IP() == cfg.Server.Host
 		},
 	})
 }
