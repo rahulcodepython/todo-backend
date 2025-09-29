@@ -18,6 +18,9 @@ func GeneralAPILimiter() fiber.Handler {
 				"message": "Too many requests, please try again after one minute.",
 			})
 		},
+		Next: func(c *fiber.Ctx) bool {
+			return c.IP() == "127.0.0.1"
+		},
 	})
 }
 
@@ -31,6 +34,9 @@ func StrictSecurityLimiter() fiber.Handler {
 				"status":  "fail",
 				"message": "Too many failed attempts. This action is blocked for 10 minutes.",
 			})
+		},
+		Next: func(c *fiber.Ctx) bool {
+			return c.IP() == "127.0.0.1"
 		},
 	})
 }
