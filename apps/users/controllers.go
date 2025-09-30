@@ -42,8 +42,8 @@ func (uc *UserControl) RegisterUserController(c *fiber.Ctx) error {
 
 	var count int
 
-	result := uc.db.QueryRow(CheckUniqueEmailQuery, body.Email)
-	if err := result.Scan(&count); err != nil {
+	err := uc.db.QueryRow(CheckUniqueEmailQuery, body.Email).Scan(&count)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response{
 			Success: false,
 			Message: "Error checking unique email",
@@ -144,8 +144,8 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 	var user User
 	var jwt JWT
 
-	result := uc.db.QueryRow(CheckUserExistsByEmailGetId_PasswordQuery, body.Email)
-	if err := result.Scan(&user.ID, &user.Password); err != nil {
+	err := uc.db.QueryRow(CheckUserExistsByEmailGetId_PasswordQuery, body.Email).Scan(&user.ID, &user.Password)
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).JSON(response{
 				Success: false,
@@ -169,8 +169,8 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 		})
 	}
 
-	result = uc.db.QueryRow(GetUserLoginInfoQuery, user.ID)
-	if err := result.Scan(&user.ID, &user.Name, &user.Email, &user.Image, &jwt.ID, &jwt.Token, &jwt.ExpiresAt, &user.CreatedAt, &user.UpdatedAt); err != nil {
+	err = uc.db.QueryRow(GetUserLoginInfoQuery, user.ID).Scan(&user.ID, &user.Name, &user.Email, &user.Image, &jwt.ID, &jwt.Token, &jwt.ExpiresAt, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).JSON(response{
 				Success: false,
@@ -195,7 +195,7 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 		jwt.Token = jwtToken.Token
 		jwt.ExpiresAt = jwtToken.ExpiresAt
 
-		_, err := uc.db.Exec(DeleteExpiredJWTQuery, oldJWTId)
+		_, err := uc.db.Exec(DeleteJWTByIdQuery, oldJWTId)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(response{
 				Success: false,
@@ -228,5 +228,23 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 		Success: true,
 		Message: "User logged in successfully",
 		Data:    responseUser,
+	})
+}
+
+func (uc *UserControl) LogoutUserController(c *fiber.Ctx) error {
+	jwt := c.Locals("jwt").(JWT)
+
+	_, err := uc.db.Exec(DeleteJWTByIdQuery, jwt.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response{
+			Success: false,
+			Message: "Error deleting JWT",
+			Error:   err.Error(),
+		})
+	}
+
+	return c.JSON(response{
+		Success: true,
+		Message: "User logged out successfully",
 	})
 }

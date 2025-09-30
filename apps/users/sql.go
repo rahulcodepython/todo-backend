@@ -16,6 +16,6 @@ var CheckUserExistsByEmailGetId_PasswordQuery = fmt.Sprintf("SELECT id, password
 
 var GetUserLoginInfoQuery = fmt.Sprintf("SELECT u.id, u.name, u.email, u.image, j.id, j.token, j.expires_at, u.created_at, u.updated_at FROM %s u JOIN %s j ON u.jwt = j.id WHERE u.id = $1", utils.UserTableName, utils.JWTTableName)
 
-var DeleteExpiredJWTQuery = fmt.Sprintf("DELETE FROM %s WHERE id = $1", utils.JWTTableName)
+var DeleteJWTByIdQuery = fmt.Sprintf("DELETE FROM %s WHERE id = $1", utils.JWTTableName)
 
 var CreateNewJWT_UpdateUserRowQuery = fmt.Sprintf("WITH new_token AS (INSERT INTO %s %s VALUES ($1, $2, $3) RETURNING id) UPDATE %s SET jwt = (SELECT id FROM new_token) WHERE id = $4", utils.JWTTableName, utils.JWTTableSchema, utils.UserTableName)
