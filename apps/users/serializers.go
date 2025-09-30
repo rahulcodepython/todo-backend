@@ -1,5 +1,7 @@
 package users
 
+import "github.com/google/uuid"
+
 type response struct {
 	Success bool        `json:"success"`
 	Message string      `json:"message"`
@@ -9,13 +11,17 @@ type response struct {
 type registerUserRequest struct {
 	Name     string `json:"name" validate:"required,min=2,max=100"`
 	Email    string `json:"email" validate:"required,email"`
+	Image    string `json:"image"`
 	Password string `json:"password" validate:"required,min=6"`
 }
 
 type registerUserResponse struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	Image     string    `json:"image"`
+	Token     string    `json:"token,omitempty"`
+	ExpiresAt string    `json:"expires_at,omitempty"`
+	CreatedAt string    `json:"created_at"`
+	UpdatedAt string    `json:"updated_at"`
 }

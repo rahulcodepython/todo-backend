@@ -12,23 +12,24 @@ type Token struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
-func CreateToken(userId string, cfg *config.Config) (*Token, error) {
+func CreateToken(userId string, cfg *config.Config) *Token {
 	token := Token{
 		Token:     "",
 		ExpiresAt: time.Now().Add(cfg.JWT.Expires),
 	}
 
-	jwt := jwt.NewWithClaims(jwt.SigningMethodHS256,
-		jwt.MapClaims{
-			"userId": userId,
-			"exp":    time.Now().Add(cfg.JWT.Expires).Unix(),
-		})
+	claims := jwt.MapClaims{
+		"user_id": userId,
+		"exp":     time.Now().Add(cfg.JWT.Expires).Unix(),
+		"iat":     time.Now().Unix(),
+	}
 
-	tokenString, err := jwt.SignedString(cfg.JWT.SecretKey)
+	tokenClaims := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := tokenClaims.SignedString([]byte(cfg.JWT.SecretKey))
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
 	token.Token = tokenString
-	return &token, nil
+	return &token
 }
