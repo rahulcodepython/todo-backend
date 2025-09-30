@@ -29,6 +29,7 @@ func (uc *UserControl) RegisterUserController(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(response{
 			Success: false,
 			Message: "Invalid request body",
+			Error:   err.Error(),
 		})
 	}
 
@@ -39,8 +40,25 @@ func (uc *UserControl) RegisterUserController(c *fiber.Ctx) error {
 		})
 	}
 
-	userId, _ := uuid.NewV7()
+	var count int
 
+	result := uc.db.QueryRow(CheckUniqueEmailQuery, body.Email)
+	if err := result.Scan(&count); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response{
+			Success: false,
+			Message: "Error checking unique email",
+			Error:   err.Error(),
+		})
+	}
+
+	if count > 0 {
+		return c.Status(fiber.StatusNotAcceptable).JSON(response{
+			Success: false,
+			Message: "This email already is ready used. Try something new!",
+		})
+	}
+
+	userId, _ := uuid.NewV7()
 	user := User{
 		ID:        userId,
 		Name:      body.Name,
@@ -50,32 +68,40 @@ func (uc *UserControl) RegisterUserController(c *fiber.Ctx) error {
 		UpdatedAt: time.Now(),
 	}
 
-	jwtToken := utils.CreateToken(user.ID.String(), uc.cfg)
-
 	encryptedPassword, err := utils.Encrypt(user.Password)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response{
 			Success: false,
 			Message: "Error encrypting password",
+			Error:   err.Error(),
 		})
 	}
-	user.Password = encryptedPassword
 
+	user.Password = encryptedPassword
+	jwtToken := utils.CreateToken(user.ID.String(), uc.cfg)
 	tokenId, _ := uuid.NewV7()
 
-	_, err = uc.db.Exec(CreateJWTTokenQuery, tokenId.String(), jwtToken.Token, jwtToken.ExpiresAt)
+	jwt := JWT{
+		ID:        tokenId,
+		Token:     jwtToken.Token,
+		ExpiresAt: jwtToken.ExpiresAt,
+	}
+
+	_, err = uc.db.Exec(CreateJWTTokenQuery, jwt.ID.String(), jwt.Token, jwt.ExpiresAt)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response{
 			Success: false,
-			Message: "Error SQL Query: creating JWT token",
+			Message: "Error creating JWT token",
+			Error:   err.Error(),
 		})
 	}
 
-	_, err = uc.db.Exec(CreateUserQuery, user.ID, user.Name, user.Email, user.Image, user.Password, jwtToken.Token, user.CreatedAt, user.UpdatedAt)
+	_, err = uc.db.Exec(CreateUserQuery, user.ID, user.Name, user.Email, user.Image, user.Password, jwt.ID, user.CreatedAt, user.UpdatedAt)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response{
 			Success: false,
-			Message: "Error SQL Query: creating user",
+			Message: "Error creating user",
+			Error:   err.Error(),
 		})
 	}
 
@@ -85,7 +111,7 @@ func (uc *UserControl) RegisterUserController(c *fiber.Ctx) error {
 		Email:     user.Email,
 		CreatedAt: utils.ParseTime(user.CreatedAt),
 		UpdatedAt: utils.ParseTime(user.UpdatedAt),
-		Token:     jwtToken.Token,
+		Token:     jwt.Token,
 		ExpiresAt: utils.ParseTime(jwtToken.ExpiresAt),
 	}
 
