@@ -27,9 +27,8 @@ func GeneralAPILimiter(cfg *config.Config) fiber.Handler {
 
 func StrictSecurityLimiter(cfg *config.Config) fiber.Handler {
 	return limiter.New(limiter.Config{
-		Max:                    5,
-		Expiration:             10 * time.Minute,
-		SkipSuccessfulRequests: true,
+		Max:        5,
+		Expiration: 10 * time.Minute,
 		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
 				"status":  "fail",

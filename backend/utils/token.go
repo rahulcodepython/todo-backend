@@ -7,17 +7,28 @@ import (
 	"github.com/rahulcodepython/todo-backend/backend/config"
 )
 
-func createToken(userId string, cfg *config.Config) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
+type Token struct {
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+func CreateToken(userId string, cfg *config.Config) (*Token, error) {
+	token := Token{
+		Token:     "",
+		ExpiresAt: time.Now().Add(cfg.JWT.Expires),
+	}
+
+	jwt := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
 			"userId": userId,
 			"exp":    time.Now().Add(cfg.JWT.Expires).Unix(),
 		})
 
-	tokenString, err := token.SignedString(cfg.JWT.SecretKey)
+	tokenString, err := jwt.SignedString(cfg.JWT.SecretKey)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return tokenString, nil
+	token.Token = tokenString
+	return &token, nil
 }

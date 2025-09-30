@@ -8,6 +8,6 @@ import (
 
 func Logger(cfg *config.Config) fiber.Handler {
 	return logger.New(logger.Config{
-		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
+		Format: "${protocol}://${ip}:${port} ${status} - ${method} ${path} [${time}]\n",
 	})
 }
