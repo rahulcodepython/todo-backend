@@ -68,7 +68,7 @@ func (uc *UserControl) RegisterUserController(c *fiber.Ctx) error {
 		UpdatedAt: time.Now(),
 	}
 
-	encryptedPassword, err := utils.Encrypt(user.Password)
+	encryptedPassword, err := utils.EncryptPassword(user.Password)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response{
 			Success: false,
@@ -105,14 +105,14 @@ func (uc *UserControl) RegisterUserController(c *fiber.Ctx) error {
 		})
 	}
 
-	responseUser := registerUserResponse{
+	responseUser := register_loginUserResponse{
 		ID:        user.ID,
 		Name:      user.Name,
 		Email:     user.Email,
 		CreatedAt: utils.ParseTime(user.CreatedAt),
 		UpdatedAt: utils.ParseTime(user.UpdatedAt),
 		Token:     jwt.Token,
-		ExpiresAt: utils.ParseTime(jwtToken.ExpiresAt),
+		ExpiresAt: utils.ParseTime(jwt.ExpiresAt),
 	}
 
 	response := response{
@@ -121,4 +121,112 @@ func (uc *UserControl) RegisterUserController(c *fiber.Ctx) error {
 		Data:    responseUser,
 	}
 	return c.JSON(response)
+}
+
+func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
+	body := new(loginUserRequest)
+
+	if err := c.BodyParser(body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(response{
+			Success: false,
+			Message: "Invalid request body",
+			Error:   err.Error(),
+		})
+	}
+
+	if body.Email == "" || body.Password == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(response{
+			Success: false,
+			Message: "All fields are required",
+		})
+	}
+
+	var user User
+	var jwt JWT
+
+	result := uc.db.QueryRow(CheckUserExistsByEmailGetId_PasswordQuery, body.Email)
+	if err := result.Scan(&user.ID, &user.Password); err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).JSON(response{
+				Success: false,
+				Message: "User not found",
+				Error:   err.Error(),
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(response{
+			Success: false,
+			Message: "Error checking user",
+			Error:   err.Error(),
+		})
+	}
+
+	passwordMatched := utils.CompareEncryptedPassword(user.Password, body.Password)
+	if !passwordMatched {
+		return c.Status(fiber.StatusUnauthorized).JSON(response{
+			Success: false,
+			Message: "Invalid credentials",
+		})
+	}
+
+	result = uc.db.QueryRow(GetUserLoginInfoQuery, user.ID)
+	if err := result.Scan(&user.ID, &user.Name, &user.Email, &user.Image, &jwt.ID, &jwt.Token, &jwt.ExpiresAt, &user.CreatedAt, &user.UpdatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).JSON(response{
+				Success: false,
+				Message: "User not found",
+				Error:   err.Error(),
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(response{
+			Success: false,
+			Message: "Error finding user",
+			Error:   err.Error(),
+		})
+	}
+
+	if jwt.ExpiresAt.Before(time.Now()) {
+		jwtToken := utils.CreateToken(user.ID.String(), uc.cfg)
+		oldJWTId := jwt.ID
+		tokenId, _ := uuid.NewV7()
+
+		jwt.ID = tokenId
+		jwt.Token = jwtToken.Token
+		jwt.ExpiresAt = jwtToken.ExpiresAt
+
+		_, err := uc.db.Exec(DeleteExpiredJWTQuery, oldJWTId)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(response{
+				Success: false,
+				Message: "Error deleting expired JWT",
+				Error:   err.Error(),
+			})
+		}
+
+		_, err = uc.db.Exec(CreateNewJWT_UpdateUserRowQuery, jwt.ID, jwt.Token, jwt.ExpiresAt, user.ID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(response{
+				Success: false,
+				Message: "Error creating new JWT and updating the user",
+				Error:   err.Error(),
+			})
+		}
+	}
+
+	responseUser := register_loginUserResponse{
+		ID:        user.ID,
+		Name:      user.Name,
+		Email:     user.Email,
+		CreatedAt: utils.ParseTime(user.CreatedAt),
+		UpdatedAt: utils.ParseTime(user.UpdatedAt),
+		Token:     jwt.Token,
+		ExpiresAt: utils.ParseTime(jwt.ExpiresAt),
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response{
+		Success: true,
+		Message: "User logged in successfully",
+		Data:    responseUser,
+	})
 }

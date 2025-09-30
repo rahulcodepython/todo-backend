@@ -16,7 +16,7 @@ type registerUserRequest struct {
 	Password string `json:"password" validate:"required,min=6"`
 }
 
-type registerUserResponse struct {
+type register_loginUserResponse struct {
 	ID        uuid.UUID `json:"id"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
@@ -25,4 +25,9 @@ type registerUserResponse struct {
 	ExpiresAt string    `json:"expires_at,omitempty"`
 	CreatedAt string    `json:"created_at"`
 	UpdatedAt string    `json:"updated_at"`
+}
+
+type loginUserRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=6"`
 }

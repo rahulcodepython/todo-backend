@@ -54,4 +54,7 @@ func Router(app *fiber.App, cfg *config.Config, db *sql.DB) {
 	// Define a POST route for user registration ("/api/v1/auth/register").
 	// This route maps to the RegisterUserController method of the userController.
 	auth.Post("/register", userController.RegisterUserController) // /api/v1/auth/register
+	// Define a POST route for user login ("/api/v1/auth/login").
+	// This route maps to the LoginUserController method of the userController.
+	auth.Post("/login", userController.LoginUserController) // /api/v1/auth/login
 }

@@ -13,8 +13,8 @@ const (
 	// JWTTableName defines the constant string for the name of the 'jwt_tokens' table in the database.
 	// This table is typically used to store JSON Web Tokens, often for session management or blacklisting.
 	JWTTableName = "jwt_tokens"
-	// JWTTABLESCHEMA defines the constant string representing the column names for the 'jwt_tokens' table.
+	// JWTTableSchema defines the constant string representing the column names for the 'jwt_tokens' table.
 	// This schema specifies the structure of the JWT storage, including the token itself and its expiration time,
 	// which is crucial for validating and managing user sessions.
-	JWTTABLESCHEMA = "(id, token, expires_at)"
+	JWTTableSchema = "(id, token, expires_at)"
 )
