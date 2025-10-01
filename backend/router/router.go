@@ -60,4 +60,7 @@ func Router(app *fiber.App, cfg *config.Config, db *sql.DB) {
 	// Define a GET route for user logout ("/api/v1/auth/logout").
 	// This route maps to the LogoutUserController method of the userController.
 	auth.Get("/logout", middleware.Authenticated(db), userController.LogoutUserController) // /api/v1/auth/logout
+	// Define a GET route for user profile ("/api/v1/auth/profile").
+	// This route maps to the UserProfileController method of the userController.
+	auth.Get("/profile", middleware.Authenticated(db), userController.UserProfileController) // /api/v1/auth/profile
 }

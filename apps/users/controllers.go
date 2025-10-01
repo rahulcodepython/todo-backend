@@ -144,12 +144,12 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 	var user User
 	var jwt JWT
 
-	err := uc.db.QueryRow(CheckUserExistsByEmailGetId_PasswordQuery, body.Email).Scan(&user.ID, &user.Password)
+	err := uc.db.QueryRow(GetUserProfileByEmailQuery, body.Email).Scan(&user.ID, &user.Name, &user.Email, &user.Image, &user.Password, &user.JWT, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).JSON(response{
 				Success: false,
-				Message: "User not found",
+				Message: "User not found + 1",
 				Error:   err.Error(),
 			})
 		}
@@ -169,40 +169,13 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 		})
 	}
 
-	err = uc.db.QueryRow(GetUserLoginInfoQuery, user.ID).Scan(&user.ID, &user.Name, &user.Email, &user.Image, &jwt.ID, &jwt.Token, &jwt.ExpiresAt, &user.CreatedAt, &user.UpdatedAt)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return c.Status(fiber.StatusNotFound).JSON(response{
-				Success: false,
-				Message: "User not found",
-				Error:   err.Error(),
-			})
-		}
-
-		return c.Status(fiber.StatusInternalServerError).JSON(response{
-			Success: false,
-			Message: "Error finding user",
-			Error:   err.Error(),
-		})
-	}
-
-	if jwt.ExpiresAt.Before(time.Now()) {
+	if !user.JWT.Valid {
 		jwtToken := utils.CreateToken(user.ID.String(), uc.cfg)
-		oldJWTId := jwt.ID
 		tokenId, _ := uuid.NewV7()
 
 		jwt.ID = tokenId
 		jwt.Token = jwtToken.Token
 		jwt.ExpiresAt = jwtToken.ExpiresAt
-
-		_, err := uc.db.Exec(DeleteJWTByIdQuery, oldJWTId)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(response{
-				Success: false,
-				Message: "Error deleting expired JWT",
-				Error:   err.Error(),
-			})
-		}
 
 		_, err = uc.db.Exec(CreateNewJWT_UpdateUserRowQuery, jwt.ID, jwt.Token, jwt.ExpiresAt, user.ID)
 		if err != nil {
@@ -211,6 +184,51 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 				Message: "Error creating new JWT and updating the user",
 				Error:   err.Error(),
 			})
+		}
+	} else {
+		err = uc.db.QueryRow(GetUserLoginInfoQuery, user.ID).Scan(&user.ID, &user.Name, &user.Email, &user.Image, &jwt.ID, &jwt.Token, &jwt.ExpiresAt, &user.CreatedAt, &user.UpdatedAt)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return c.Status(fiber.StatusNotFound).JSON(response{
+					Success: false,
+					Message: "User not found + 2",
+					Error:   err.Error(),
+				})
+			}
+
+			return c.Status(fiber.StatusInternalServerError).JSON(response{
+				Success: false,
+				Message: "Error finding user",
+				Error:   err.Error(),
+			})
+		}
+
+		if jwt.ExpiresAt.Before(time.Now()) {
+			jwtToken := utils.CreateToken(user.ID.String(), uc.cfg)
+			oldJWTId := jwt.ID
+			tokenId, _ := uuid.NewV7()
+
+			jwt.ID = tokenId
+			jwt.Token = jwtToken.Token
+			jwt.ExpiresAt = jwtToken.ExpiresAt
+
+			_, err := uc.db.Exec(DeleteJWTByIdQuery, oldJWTId)
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(response{
+					Success: false,
+					Message: "Error deleting expired JWT",
+					Error:   err.Error(),
+				})
+			}
+
+			_, err = uc.db.Exec(CreateNewJWT_UpdateUserRowQuery, jwt.ID, jwt.Token, jwt.ExpiresAt, user.ID)
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(response{
+					Success: false,
+					Message: "Error creating new JWT and updating the user",
+					Error:   err.Error(),
+				})
+			}
 		}
 	}
 
@@ -246,5 +264,34 @@ func (uc *UserControl) LogoutUserController(c *fiber.Ctx) error {
 	return c.JSON(response{
 		Success: true,
 		Message: "User logged out successfully",
+	})
+}
+
+func (uc *UserControl) UserProfileController(c *fiber.Ctx) error {
+	jwt := c.Locals("jwt").(JWT)
+
+	var user User
+
+	err := uc.db.QueryRow(GetUserProfileByJWTQuery, jwt.ID).Scan(&user.ID, &user.Name, &user.Email, &user.Image, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.Status(fiber.StatusInternalServerError).JSON(response{
+				Success: false,
+				Message: "Internal Server Error",
+				Error:   err.Error(),
+			})
+		}
+
+		return c.Status(fiber.StatusNotFound).JSON(response{
+			Success: false,
+			Message: "User not found",
+			Error:   err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response{
+		Success: true,
+		Message: "User profile fetched successfully",
+		Data:    user,
 	})
 }
