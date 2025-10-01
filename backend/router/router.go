@@ -8,6 +8,8 @@ import (
 	"github.com/rahulcodepython/todo-backend/apps/users"
 	// Import the "database" package from the application's "backend" directory, likely for database connection utilities.
 	"github.com/rahulcodepython/todo-backend/backend/database"
+	"github.com/rahulcodepython/todo-backend/backend/response"
+
 	// Import the "middleware" package from the application's "backend" directory, which provides various HTTP middleware functions.
 	"github.com/rahulcodepython/todo-backend/backend/middleware"
 
@@ -38,10 +40,7 @@ func Router(app *fiber.App, cfg *config.Config, db *sql.DB) {
 		database.PingDB(db)
 
 		// Return a JSON response indicating successful database connection.
-		return c.JSON(fiber.Map{
-			"success": true,
-			"message": "Database connected successfully",
-		})
+		return response.OKResponse(c, "Database connected successfully", nil)
 	})
 
 	// Create a new Fiber group for authentication-related routes. All routes within this group
