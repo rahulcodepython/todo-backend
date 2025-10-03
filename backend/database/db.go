@@ -88,6 +88,38 @@ func createTable(db *sql.DB) {
 	}
 	// Log a success message after the 'users' table has been created or verified.
 	log.Println("users table created successfully.")
+
+	// Todo Table
+	// Define the SQL query to create the 'todos' table.
+	// This table stores todo-related information, including todo owner.
+	query = `
+		CREATE TABLE IF NOT EXISTS todos (
+		id UUID PRIMARY KEY,
+		title TEXT NOT NULL,
+		completed BOOLEAN NOT NULL DEFAULT FALSE,
+		owner UUID NOT NULL, -- The foreign key that creates the link
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+		-- The constraint ensures data integrity
+		CONSTRAINT fk_owner
+			FOREIGN KEY(owner)
+			REFERENCES users(id)
+			ON DELETE CASCADE -- If a owner is deleted, all their todos are also deleted.
+		);
+
+		-- Create an index for high performance lookups
+		CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(owner);
+		`
+	// Execute the SQL query to create the 'todos' table.
+	_, err = db.Exec(query)
+	if err != nil {
+		// If an error occurs during table creation, log a message indicating the failure.
+		log.Println("Unable to create todos table")
+		// Terminate the application with a fatal error, as schema initialization is critical.
+		log.Fatal(err)
+	}
+	// Log a success message after the 'todos' table has been created or verified.
+	log.Println("todos table created successfully.")
 }
 
 // ConnectDB establishes a connection to the PostgreSQL database using the provided configuration.

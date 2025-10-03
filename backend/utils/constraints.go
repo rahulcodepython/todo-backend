@@ -17,4 +17,7 @@ const (
 	// This schema specifies the structure of the JWT storage, including the token itself and its expiration time,
 	// which is crucial for validating and managing user sessions.
 	JWTTableSchema = "id, token, expires_at"
+
+	TodoTableName   = "todos"
+	TodoTableSchema = "id, title, completed, owner, created_at"
 )
