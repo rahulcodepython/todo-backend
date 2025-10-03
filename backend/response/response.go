@@ -142,6 +142,14 @@ func OKResponse(c *fiber.Ctx, message string, data interface{}) error {
 	})
 }
 
+func OKCreatedResponse(c *fiber.Ctx, message string, data interface{}) error {
+	return c.Status(fiber.StatusCreated).JSON(utils.Response{ // Set the HTTP status code to 200 (OK) and send a JSON response.
+		Success: true,    // Indicate that the operation was successful.
+		Message: message, // Include the success message.
+		Data:    data,    // Include the actual data payload.
+	})
+}
+
 func TooManyRequests(c *fiber.Ctx, message string) error {
 	return c.Status(fiber.StatusTooManyRequests).JSON(utils.Response{
 		Success: false,

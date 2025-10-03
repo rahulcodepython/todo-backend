@@ -2,6 +2,7 @@ package todos
 
 import (
 	"database/sql"
+	"math"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -65,25 +66,75 @@ func (tc *TodoController) CreateTodoController(c *fiber.Ctx) error {
 	}
 
 	todoResponse := TodoResponse{
-		ID:        todo.ID.String(),
+		ID:        todo.ID,
 		Title:     todo.Title,
 		Completed: todo.Completed,
 		CreatedAt: todo.CreatedAt,
 	}
 
-	return response.OKResponse(c, "Todo created successfully", todoResponse)
+	return response.OKCreatedResponse(c, "Todo created successfully", todoResponse)
 }
 func (tc *TodoController) GetTodosController(c *fiber.Ctx) error {
 	user := c.Locals("user").(users.User)
 
-	var todos []Todo
+	completedQuery := c.Query("completed")
+	completed := c.QueryBool("completed")
 
-	rows, err := tc.db.Query(GetTodosQuery, user.ID)
+	page := c.QueryInt("page", 1)
+	if page <= 0 {
+		page = 1
+	}
+
+	limit := c.QueryInt("limit", 10)
+	if limit <= 0 {
+		limit = 10
+	} else if limit > 100 {
+		limit = 100
+	}
+
+	var totalItems int64
+	var err error
+
+	if completedQuery == "" {
+		err = tc.db.QueryRow(CountTodosByUserQuery, user.ID).Scan(&totalItems)
+	} else {
+		err = tc.db.QueryRow(CountTodosByUserFilteredByCompletedQuery, user.ID, completed).Scan(&totalItems)
+	}
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return response.OKResponse(c, "No todos found", fiber.Map{})
-		}
-		return response.InternelServerError(c, err, "Unable to get todos")
+		return response.InternelServerError(c, err, "Failed to retrieve todo count")
+	}
+
+	if totalItems == 0 {
+		// If there are no items, return an empty response immediately.
+		return response.OKResponse(c, "Todos fetched successfully", PaginatedTodoResponse{
+			Results:    []TodoResponse{},
+			Count:      0,
+			TotalItems: 0,
+			TotalPages: 0,
+			Page:       page,
+			Limit:      limit,
+		})
+	}
+
+	var todos []TodoResponse
+	var rows *sql.Rows
+
+	totalPages := int(math.Ceil(float64(totalItems) / float64(limit)))
+
+	if page > totalPages {
+		page = totalPages
+	}
+
+	offset := (page - 1) * limit
+
+	if completedQuery == "" {
+		rows, err = tc.db.Query(GetTodosByUserQuery, user.ID, limit, offset)
+	} else {
+		rows, err = tc.db.Query(GetTodosByUserFilteredByCompletedQuery, user.ID, completed, limit, offset)
+	}
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "message": "Failed to retrieve todos"})
 	}
 	defer rows.Close()
 
@@ -95,7 +146,7 @@ func (tc *TodoController) GetTodosController(c *fiber.Ctx) error {
 			return response.InternelServerError(c, err, "Unable to get todos")
 		}
 
-		todos = append(todos, Todo{
+		todos = append(todos, TodoResponse{
 			ID:        todo.ID,
 			Title:     todo.Title,
 			Completed: todo.Completed,
@@ -103,7 +154,16 @@ func (tc *TodoController) GetTodosController(c *fiber.Ctx) error {
 		})
 	}
 
-	return response.OKResponse(c, "Todo fetched successfully", todos)
+	paginatedTodoResponse := PaginatedTodoResponse{
+		Results:    todos,
+		Count:      len(todos),
+		TotalItems: totalItems,
+		TotalPages: totalPages,
+		Page:       page,
+		Limit:      limit,
+	}
+
+	return response.OKResponse(c, "Todo fetched successfully", paginatedTodoResponse)
 }
 func (tc *TodoController) UpdateTodoController(c *fiber.Ctx) error {
 	user := c.Locals("user").(users.User)
@@ -137,7 +197,7 @@ func (tc *TodoController) UpdateTodoController(c *fiber.Ctx) error {
 	}
 
 	todoResponse := TodoResponse{
-		ID:        todo.ID.String(),
+		ID:        todo.ID,
 		Title:     todo.Title,
 		Completed: todo.Completed,
 		CreatedAt: todo.CreatedAt,
@@ -191,7 +251,7 @@ func (tc *TodoController) CompleteTodoController(c *fiber.Ctx) error {
 	}
 
 	todoResponse := TodoResponse{
-		ID:        todo.ID.String(),
+		ID:        todo.ID,
 		Title:     todo.Title,
 		Completed: todo.Completed,
 		CreatedAt: todo.CreatedAt,
