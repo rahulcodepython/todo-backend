@@ -1,41 +1,27 @@
-// Package users provides handlers and logic for user-related operations
-// such as registration, login, logout, and profile management.
 package users
 
 import (
-	// Standard library package for database/sql operations.
 	"database/sql"
-
-	// Standard library package for handling time-related data.
+	"log"
 	"time"
 
-	// The web framework used for building the API.
 	"github.com/gofiber/fiber/v2"
-	// Package for generating UUIDs, specifically V7 which is time-ordered.
 	"github.com/google/uuid"
-	// Internal package for application configuration.
 	"github.com/rahulcodepython/todo-backend/apps"
 	"github.com/rahulcodepython/todo-backend/backend/config"
-
-	// Internal package for standardized API responses.
 	"github.com/rahulcodepython/todo-backend/backend/response"
-	// Internal package for utility functions like password hashing and token creation.
 	"github.com/rahulcodepython/todo-backend/backend/utils"
 )
 
-// UserControl is a struct that holds dependencies for user-related handlers.
-// It acts as a controller, centralizing the configuration and database connection.
 type UserControl struct {
-	// cfg holds the application's configuration, like JWT secrets and timings.
 	cfg *config.Config
-	// db is the database connection pool used for all user-related queries.
-	db *sql.DB
+	db  *sql.DB
 }
 
-// NewUserControl is a constructor function that creates and returns a new instance of UserControl.
-// This pattern is used for dependency injection, making the controller easier to test and manage.
 func NewUserControl(cfg *config.Config, db *sql.DB) *UserControl {
-	// Returns a pointer to a new UserControl struct initialized with the provided config and db connection.
+	if db == nil {
+		log.Fatal("Database connection is nil in NewUserControl!")
+	}
 	return &UserControl{
 		cfg: cfg,
 		db:  db,
@@ -71,6 +57,17 @@ func CreateNewJWTAndUpdateUser(user User, uc *UserControl, c *fiber.Ctx) (JWT, e
 
 	// If successful, return the newly created JWT struct and no error.
 	return jwt, nil
+}
+
+func ParseJWT(c *fiber.Ctx) (JWT, bool) {
+	jwtInterface := c.Locals("jwt")
+	if jwtInterface == nil {
+		return JWT{}, false
+	}
+
+	jwt, ok := jwtInterface.(JWT)
+
+	return jwt, ok
 }
 
 // RegisterUserController handles the logic for new user registration.
@@ -253,46 +250,43 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 	return response.OKResponse(c, "User logged in successfully", responseUser)
 }
 
-// LogoutUserController handles user logout by invalidating their current JWT.
 func (uc *UserControl) LogoutUserController(c *fiber.Ctx) error {
-	// Retrieve the JWT data from the request's local context.
-	// This data is typically placed here by an authentication middleware after validating the token.
-	jwt := c.Locals("jwt").(JWT)
+	jwt, ok := ParseJWT(c)
+	if !ok {
+		return response.InternelServerError(c, nil, "Invalid JWT type in context")
+	}
 
-	// Execute a SQL query to delete the JWT record from the database using its unique ID.
-	// This effectively invalidates the token for any future requests.
+	// Delete JWT from database
 	_, err := uc.db.Exec(DeleteJWTByIdQuery, jwt.ID)
-	// Check for any errors during the database deletion.
 	if err != nil {
-		// If an error occurs, return a 500 Internal Server Error.
 		return response.InternelServerError(c, err, "Error deleting JWT")
 	}
 
-	// Send a 200 OK response with a success message and no data payload.
 	return response.OKResponse(c, "User logged out successfully", nil)
 }
 
-// UserProfileController fetches and returns the profile of the currently authenticated user.
 func (uc *UserControl) UserProfileController(c *fiber.Ctx) error {
-	// Retrieve the validated JWT data from the request's local context, put there by a middleware.
-	jwt := c.Locals("jwt").(JWT)
-
-	// Declare a 'user' variable to hold the profile data.
-	var user User
-
-	// Query the database to get the user's profile information by joining with the JWT ID.
-	err := uc.db.QueryRow(GetUserProfileByJWTQuery, jwt.ID).Scan(&user.ID, &user.Name, &user.Email, &user.Image, &user.CreatedAt, &user.UpdatedAt)
-	// Check for errors during the database query.
-	if err != nil {
-		// If the user associated with the JWT is not found, it might indicate a data consistency issue.
-		if err == sql.ErrNoRows {
-			// This case is treated as an internal server error as a valid JWT should always have a corresponding user.
-			return response.InternelServerError(c, err, "Error checking user")
-		}
-		// For other errors, return a 404 Not Found. This logic could be swapped with the above depending on desired behavior.
-		return response.NotFound(c, err, "User not found")
+	jwt, ok := ParseJWT(c)
+	if !ok {
+		return response.InternelServerError(c, nil, "Invalid JWT type in context")
 	}
 
-	// If the user profile is fetched successfully, send a 200 OK response with the user data.
+	var user User
+	err := uc.db.QueryRow(GetUserProfileByJWTQuery, jwt.ID).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Email,
+		&user.Image,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return response.NotFound(c, err, "User not found")
+		}
+		return response.InternelServerError(c, err, "Error fetching user profile")
+	}
+
 	return response.OKResponse(c, "User profile fetched successfully", user)
 }

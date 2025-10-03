@@ -42,6 +42,10 @@ func main() {
 	// Create a new Fiber application instance. This initializes the web server framework.
 	server := fiber.New()
 
+	// Register all application routes and middleware with the Fiber server.
+	// This function typically sets up API endpoints, authentication, and other request processing logic.
+	router.Router(server, cfg, db)
+
 	// Construct the server address string from the configuration, combining the host and port.
 	// For example, if Host is "0.0.0.0" and Port is "8080", address will be "0.0.0.0:8080".
 	address := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
@@ -56,10 +60,6 @@ func main() {
 			log.Panicf("Server error: %v", err)
 		}
 	}()
-
-	// Register all application routes and middleware with the Fiber server.
-	// This function typically sets up API endpoints, authentication, and other request processing logic.
-	router.Router(server, cfg, db)
 
 	// Create a buffered channel of type os.Signal with a capacity of 1.
 	// This channel will be used to receive notifications about operating system signals.
