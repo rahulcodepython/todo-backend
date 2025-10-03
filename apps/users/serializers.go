@@ -30,9 +30,3 @@ type loginUserRequest struct {
 	Email    string `json:"email" validate:"required,email"`    // User's email, required, and must be a valid email format.
 	Password string `json:"password" validate:"required,min=6"` // User's password, required, with a minimum length of 6 characters.
 }
-
-// userProfileResponse defines the structure for the JSON response sent back to the client
-// when fetching a user's profile. It includes user details but typically excludes sensitive info like password and JWT.
-// This struct is currently identical to register_loginUserResponse but might diverge if specific fields need to be excluded
-// or added for profile viewing purposes.
-type userProfileResponse register_loginUserResponse

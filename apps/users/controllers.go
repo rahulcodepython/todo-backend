@@ -5,6 +5,7 @@ package users
 import (
 	// Standard library package for database/sql operations.
 	"database/sql"
+
 	// Standard library package for handling time-related data.
 	"time"
 
@@ -13,7 +14,9 @@ import (
 	// Package for generating UUIDs, specifically V7 which is time-ordered.
 	"github.com/google/uuid"
 	// Internal package for application configuration.
+	"github.com/rahulcodepython/todo-backend/apps"
 	"github.com/rahulcodepython/todo-backend/backend/config"
+
 	// Internal package for standardized API responses.
 	"github.com/rahulcodepython/todo-backend/backend/response"
 	// Internal package for utility functions like password hashing and token creation.
@@ -37,19 +40,6 @@ func NewUserControl(cfg *config.Config, db *sql.DB) *UserControl {
 		cfg: cfg,
 		db:  db,
 	}
-}
-
-// BodyParser is a generic helper function to parse the request body into a given struct.
-// Using generics [T any] allows this function to work with any struct type (e.g., registerUserRequest, loginUserRequest).
-func BodyParser[T any](c *fiber.Ctx, body *T) error {
-	// c.BodyParser attempts to parse the incoming request body and unmarshal it into the 'body' struct.
-	if err := c.BodyParser(body); err != nil {
-		// If parsing fails, it sends a standardized bad request response to the client.
-		// This centralizes the parsing and error handling logic.
-		return response.BadInternalResponse(c, err, "Invalid request body")
-	}
-	// If parsing is successful, return nil to indicate no error occurred.
-	return nil
 }
 
 // CreateNewJWTAndUpdateUser generates a new JWT, saves it to the database,
@@ -89,7 +79,7 @@ func (uc *UserControl) RegisterUserController(c *fiber.Ctx) error {
 	body := new(registerUserRequest)
 
 	// Parse the request body into the 'body' struct. Note: This helper sends a response on error.
-	BodyParser(c, body)
+	apps.BodyParser(c, body)
 
 	// Validate that all required fields are present in the request.
 	if body.Name == "" || body.Email == "" || body.Password == "" {
@@ -175,7 +165,7 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 	body := new(loginUserRequest)
 
 	// Parse the request body into the 'body' struct.
-	BodyParser(c, body)
+	apps.BodyParser(c, body)
 
 	// Validate that both email and password are provided.
 	if body.Email == "" || body.Password == "" {
@@ -198,7 +188,7 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 			return response.NotFound(c, err, "User not found")
 		}
 		// For any other database error, return a 500 Internal Server Error.
-		return response.InternelServerError(c, err, "Error checking user")
+		return response.InternelServerError(c, err, "Error fetching user profile info")
 	}
 
 	// Compare the provided plaintext password with the hashed password stored in the database.
@@ -219,7 +209,7 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 		}
 	} else {
 		// If a JWT already exists, fetch its details along with user info.
-		err = uc.db.QueryRow(GetUserLoginInfoQuery, user.ID).Scan(&user.ID, &user.Name, &user.Email, &user.Image, &jwt.ID, &jwt.Token, &jwt.ExpiresAt, &user.CreatedAt, &user.UpdatedAt)
+		err = uc.db.QueryRow(GetUserJWTInfoQuery, user.JWT).Scan(&jwt.ID, &jwt.Token, &jwt.ExpiresAt)
 		// Handle errors during this query.
 		if err != nil {
 			// Specifically handle the case where the user/JWT might not be found.
@@ -227,7 +217,7 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 				return response.NotFound(c, err, "User not found")
 			}
 			// Handle other database errors.
-			return response.InternelServerError(c, err, "Error checking user")
+			return response.InternelServerError(c, err, "Error fetching user login info")
 		}
 
 		// Check if the existing token has expired by comparing its expiration time with the current time.
