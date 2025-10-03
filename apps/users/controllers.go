@@ -7,7 +7,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/rahulcodepython/todo-backend/apps"
 	"github.com/rahulcodepython/todo-backend/backend/config"
 	"github.com/rahulcodepython/todo-backend/backend/response"
 	"github.com/rahulcodepython/todo-backend/backend/utils"
@@ -63,9 +62,11 @@ func CreateNewJWTAndUpdateUser(user User, uc *UserControl, c *fiber.Ctx) (JWT, e
 func (uc *UserControl) RegisterUserController(c *fiber.Ctx) error {
 	// Allocate memory for a new 'registerUserRequest' struct to hold the request body data.
 	body := new(registerUserRequest)
-
-	// Parse the request body into the 'body' struct. Note: This helper sends a response on error.
-	apps.BodyParser(c, body)
+	if err := c.BodyParser(body); err != nil {
+		// If parsing fails, it sends a standardized bad request response to the client.
+		// This centralizes the parsing and error handling logic.
+		return response.BadInternalResponse(c, err, "Invalid request body")
+	}
 
 	// Validate that all required fields are present in the request.
 	if body.Name == "" || body.Email == "" || body.Password == "" {
@@ -149,9 +150,11 @@ func (uc *UserControl) RegisterUserController(c *fiber.Ctx) error {
 func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 	// Allocate memory for a new 'loginUserRequest' struct.
 	body := new(loginUserRequest)
-
-	// Parse the request body into the 'body' struct.
-	apps.BodyParser(c, body)
+	if err := c.BodyParser(body); err != nil {
+		// If parsing fails, it sends a standardized bad request response to the client.
+		// This centralizes the parsing and error handling logic.
+		return response.BadInternalResponse(c, err, "Invalid request body")
+	}
 
 	// Validate that both email and password are provided.
 	if body.Email == "" || body.Password == "" {
