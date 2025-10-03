@@ -1,155 +1,151 @@
+// This file provides functions for connecting to and initializing the database.
 package database
 
+// "database/sql" provides a generic SQL interface. It is used here to interact with the database.
 import (
-	// Import the "database/sql" package, which provides a generic interface for working with SQL databases in Go.
 	"database/sql"
-	// Import the "fmt" package for formatted I/O, used here for constructing the database connection string.
+	// "fmt" provides functions for formatted I/O. It is used here to construct the database connection string.
 	"fmt"
-	// Import the "log" package for logging messages, especially critical errors during database operations.
+	// "log" provides a simple logging package. It is used here to log database-related messages.
 	"log"
 
-	// Import the application's "config" package to access database configuration settings.
+	// "github.com/rahulcodepython/todo-backend/backend/config" is a local package that provides access to the application configuration.
 	"github.com/rahulcodepython/todo-backend/backend/config"
 
-	// Import the PostgreSQL driver. The underscore `_` indicates that the package is imported for its side effects (registering itself with `database/sql`),
-	// rather than for direct use of its exported functions or types.
-	_ "github.com/lib/pq" // PostgreSQL driver
+	// _ "github.com/lib/pq" is the PostgreSQL driver. The underscore indicates that it is imported for its side effects (registering the driver).
+	_ "github.com/lib/pq"
 )
 
-// PingDB checks the connectivity to the database.
-// It attempts to ping the database and logs a fatal error if the connection fails,
-// otherwise, it logs a success message. This function is crucial for verifying database availability.
+// PingDB checks if the database connection is alive.
+// It takes a database connection as input.
+//
+// @param db *sql.DB - The database connection.
 func PingDB(db *sql.DB) {
-	// Attempt to ping the database to verify the connection is alive and responsive.
+	// db.Ping() verifies a connection to the database is still alive, establishing a connection if necessary.
 	if err := db.Ping(); err != nil {
-		// If an error occurs during the ping, log a message indicating the failure.
+		// If the ping fails, a message is logged.
 		log.Println("Unable to ping database")
-		// Terminate the application with a fatal error, as database connectivity is often a critical dependency.
+		// The application is terminated with a fatal error.
 		log.Fatal(err)
 	}
 
-	// If the ping is successful, log a message indicating that the database is healthy.
+	// If the ping is successful, a success message is logged.
 	log.Println("Database is healthy.")
 }
 
-// createTable initializes the necessary database tables if they do not already exist.
-// This function ensures that the application's schema is present and correctly structured upon startup.
+// createTable creates the necessary tables in the database if they do not already exist.
+// It takes a database connection as input.
+//
+// @param db *sql.DB - The database connection.
 func createTable(db *sql.DB) {
+	// query is a variable that will hold the SQL query.
 	var query string
 
-	// JWT Token Table
-	// Define the SQL query to create the 'jwt_tokens' table.
-	// This table stores JSON Web Tokens, typically for session management or blacklisting.
+	// This is the SQL query to create the jwt_tokens table.
 	query = `
 		CREATE TABLE IF NOT EXISTS jwt_tokens (
-		id UUID PRIMARY KEY, -- 'id' column: A universally unique identifier, serving as the primary key for this table.
-		token TEXT NOT NULL UNIQUE, -- 'token' column: Stores the actual JWT string, must be unique and not null.
-		expires_at TIMESTAMPTZ NOT NULL, -- 'expires_at' column: Stores the timestamp when the JWT expires, ensuring tokens are not used indefinitely.
-		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW() -- 'created_at' column: Records the timestamp when the token was created, defaults to the current time.
+		id UUID PRIMARY KEY,
+		token TEXT NOT NULL UNIQUE,
+		expires_at TIMESTAMPTZ NOT NULL,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		);
 	`
-	// Execute the SQL query to create the 'jwt_tokens' table.
+	// db.Exec() executes a query without returning any rows.
 	_, err := db.Exec(query)
+	// This checks if an error occurred while creating the table.
 	if err != nil {
-		// If an error occurs during table creation, log a message indicating the failure.
+		// If an error occurs, a message is logged.
 		log.Println("Unable to create jwt token table")
-		// Terminate the application with a fatal error, as schema initialization is critical.
+		// The application is terminated with a fatal error.
 		log.Fatal(err)
 	}
-	// Log a success message after the 'jwt_tokens' table has been created or verified.
+	// A success message is logged after the table is created.
 	log.Println("jwt_tokens table created successfully.")
 
-	// User Table
-	// Define the SQL query to create the 'users' table.
-	// This table stores user-related information, including authentication details.
+	// This is the SQL query to create the users table.
 	query = `
 		CREATE TABLE IF NOT EXISTS users (
-		id UUID PRIMARY KEY, -- 'id' column: A universally unique identifier for the user, serving as the primary key.
-		name TEXT NOT NULL, -- 'name' column: Stores the user's full name, cannot be null.
-		email TEXT NOT NULL UNIQUE, -- 'email' column: Stores the user's email address, must be unique and not null, used for login.
-		image TEXT, -- 'image' column: Stores a URL or path to the user's profile image, can be null.
-		password TEXT NOT NULL, -- 'password' column: Stores the hashed password of the user, cannot be null for security.
-		jwt UUID UNIQUE, -- 'jwt' column: Stores a reference to a JWT token ID, allowing for a one-to-one relationship with 'jwt_tokens' table.
-		created_at TIMESTAMPTZ NOT NULL, -- 'created_at' column: Records the timestamp when the user account was created.
-		updated_at TIMESTAMPTZ NOT NULL, -- 'updated_at' column: Records the timestamp of the last update to the user's account.
-		CONSTRAINT fk_jwt -- Define a foreign key constraint named 'fk_jwt'.
-			FOREIGN KEY(jwt) -- The 'jwt' column in the 'users' table is the foreign key.
-			REFERENCES jwt_tokens(id) -- It references the 'id' column in the 'jwt_tokens' table.
-			ON DELETE SET NULL -- If a referenced JWT token is deleted, the 'jwt' column in the 'users' table will be set to NULL.
-	);
+		id UUID PRIMARY KEY,
+		name TEXT NOT NULL,
+		email TEXT NOT NULL UNIQUE,
+		image TEXT,
+		password TEXT NOT NULL,
+		jwt UUID UNIQUE,
+		created_at TIMESTAMPTZ NOT NULL,
+		updated_at TIMESTAMPTZ NOT NULL,
+		CONSTRAINT fk_jwt
+			FOREIGN KEY(jwt)
+			REFERENCES jwt_tokens(id)
+			ON DELETE SET NULL
+		);
 	`
-	// Execute the SQL query to create the 'users' table.
+	// db.Exec() executes a query without returning any rows.
 	_, err = db.Exec(query)
+	// This checks if an error occurred while creating the table.
 	if err != nil {
-		// If an error occurs during table creation, log a message indicating the failure.
+		// If an error occurs, a message is logged.
 		log.Println("Unable to create user table")
-		// Terminate the application with a fatal error, as schema initialization is critical.
+		// The application is terminated with a fatal error.
 		log.Fatal(err)
 	}
-	// Log a success message after the 'users' table has been created or verified.
+	// A success message is logged after the table is created.
 	log.Println("users table created successfully.")
 
-	// Todo Table
-	// Define the SQL query to create the 'todos' table.
-	// This table stores todo-related information, including todo owner.
+	// This is the SQL query to create the todos table.
 	query = `
 		CREATE TABLE IF NOT EXISTS todos (
 		id UUID PRIMARY KEY,
 		title TEXT NOT NULL,
 		completed BOOLEAN NOT NULL DEFAULT FALSE,
-		owner UUID NOT NULL, -- The foreign key that creates the link
+		owner UUID NOT NULL,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-		-- The constraint ensures data integrity
 		CONSTRAINT fk_owner
 			FOREIGN KEY(owner)
 			REFERENCES users(id)
-			ON DELETE CASCADE -- If a owner is deleted, all their todos are also deleted.
+			ON DELETE CASCADE
 		);
 
-		-- Create an index for high performance lookups
 		CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(owner);
 		`
-	// Execute the SQL query to create the 'todos' table.
+	// db.Exec() executes a query without returning any rows.
 	_, err = db.Exec(query)
+	// This checks if an error occurred while creating the table.
 	if err != nil {
-		// If an error occurs during table creation, log a message indicating the failure.
+		// If an error occurs, a message is logged.
 		log.Println("Unable to create todos table")
-		// Terminate the application with a fatal error, as schema initialization is critical.
+		// The application is terminated with a fatal error.
 		log.Fatal(err)
 	}
-	// Log a success message after the 'todos' table has been created or verified.
+	// A success message is logged after the table is created.
 	log.Println("todos table created successfully.")
 }
 
-// ConnectDB establishes a connection to the PostgreSQL database using the provided configuration.
-// It constructs a connection string, opens the database connection, pings it to verify connectivity,
-// and ensures that necessary tables are created.
+// ConnectDB establishes a connection to the database.
+// It takes the application configuration as input and returns a database connection.
 //
-// Parameters:
-// - cfg: A pointer to the application's configuration struct, containing database connection details.
-//
-// Returns:
-// - *sql.DB: A pointer to the established database connection pool.
+// @param cfg *config.Config - The application configuration.
+// @return *sql.DB - The database connection.
 func ConnectDB(cfg *config.Config) *sql.DB {
-	// Construct the database connection string using parameters from the configuration.
-	// This string includes host, port, user, password, database name, and SSL mode.
+	// connectionString is the connection string for the database.
 	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", cfg.Database.DBHost, cfg.Database.DBPort, cfg.Database.DBUser, cfg.Database.DBPassword, cfg.Database.DBName, cfg.Database.DBSSLMode)
 
-	// Open a new database connection using the "postgres" driver and the constructed connection string.
+	// db is the database connection.
+	// sql.Open() opens a database specified by its database driver name and a driver-specific data source name.
 	db, err := sql.Open("postgres", connectionString)
+	// This checks if an error occurred while opening the database connection.
 	if err != nil {
-		// If an error occurs during connection opening, log a message indicating the failure.
+		// If an error occurs, a message is logged.
 		log.Println("Unable to connect with database")
-		// Terminate the application with a fatal error, as database connectivity is essential.
+		// The application is terminated with a fatal error.
 		log.Fatal(err)
 	}
 
-	// Ping the database to ensure the connection is active and healthy.
+	// PingDB() is called to check if the database connection is alive.
 	PingDB(db)
-	// Create necessary tables if they don't exist, ensuring the database schema is ready.
+	// createTable() is called to create the necessary tables in the database.
 	createTable(db)
 
-	// Return the established database connection pool.
+	// The database connection is returned.
 	return db
 }

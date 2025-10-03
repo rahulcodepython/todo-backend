@@ -1,88 +1,83 @@
+// This file is the main entry point for the todo-backend application.
+// It initializes the configuration, database connection, and the Fiber web server.
+// It also handles graceful shutdown of the application.
 package main
 
+// "fmt" provides functions for formatted I/O. It is used here to print messages to the console.
 import (
-	// The "fmt" package provides functions for formatted I/O, such as printing to the console.
 	"fmt"
-	// The "log" package implements a simple logging package, used here for reporting server errors.
+	// "log" provides a simple logging package. It is used here to log fatal server errors.
 	"log"
-	// The "os" package provides a platform-independent interface to operating system functionality,
-	// such as environment variables and process signals.
+	// "os" provides a platform-independent interface to operating system functionality. It is used here to receive signals for graceful shutdown.
 	"os"
-	// The "os/signal" package implements access to incoming operating system signals,
-	// allowing the application to respond to events like Ctrl+C.
+	// "os/signal" provides functions for handling incoming signals from the operating system. It is used here to listen for interrupt and terminate signals.
 	"os/signal"
-	// The "syscall" package provides a low-level interface to operating system primitives,
-	// used here to specify the SIGTERM signal for graceful shutdown.
+	// "syscall" provides a low-level interface to operating system primitives. It is used here to specify the SIGTERM signal.
 	"syscall"
 
-	// "github.com/gofiber/fiber/v2" is a fast, unopinionated, and flexible web framework for Go,
-	// used to build the HTTP server and define API routes.
+	// "github.com/gofiber/fiber/v2" is a web framework for Go. It is used here to create the HTTP server and define API routes.
 	"github.com/gofiber/fiber/v2"
-	// "github.com/rahulcodepython/todo-backend/backend/config" handles loading application configurations
-	// from environment variables or a configuration file, centralizing settings management.
+	// "github.com/rahulcodepython/todo-backend/backend/config" is a local package that handles loading application configuration.
 	"github.com/rahulcodepython/todo-backend/backend/config"
-	// "github.com/rahulcodepython/todo-backend/backend/database" manages the database connection and
-	// provides functions for interacting with the database.
+	// "github.com/rahulcodepython/todo-backend/backend/database" is a local package that manages the database connection.
 	"github.com/rahulcodepython/todo-backend/backend/database"
-	// "github.com/rahulcodepython/todo-backend/backend/router" is responsible for setting up
-	// and registering all the application's API routes and middleware.
+	// "github.com/rahulcodepython/todo-backend/backend/router" is a local package that sets up the application's API routes.
 	"github.com/rahulcodepython/todo-backend/backend/router"
 )
 
-// main is the entry point of the application. Execution begins here.
+// main is the entry point of the application.
+// It initializes the server, database, and router, and then starts the server.
+// It also includes logic for graceful shutdown.
 func main() {
-	// Load application configuration. This function reads environment variables and
-	// potentially a .env file to populate the Config struct with settings for the server, database, etc.
+	// cfg is a variable that holds the application configuration.
+	// config.LoadConfig() is called to load the configuration from environment variables or a .env file.
 	cfg := config.LoadConfig()
 
-	// Establish a connection to the database using the loaded configuration.
-	// This function typically returns a database connection pool or a single connection.
+	// db is a variable that holds the database connection.
+	// database.ConnectDB() is called to establish a connection to the database using the loaded configuration.
 	db := database.ConnectDB(cfg)
 
-	// Create a new Fiber application instance. This initializes the web server framework.
+	// server is a new instance of a Fiber application.
+	// fiber.New() creates a new Fiber server.
 	server := fiber.New()
 
-	// Register all application routes and middleware with the Fiber server.
-	// This function typically sets up API endpoints, authentication, and other request processing logic.
+	// router.Router() is called to set up all the application routes and middleware.
+	// It takes the Fiber server, configuration, and database connection as arguments.
 	router.Router(server, cfg, db)
 
-	// Construct the server address string from the configuration, combining the host and port.
-	// For example, if Host is "0.0.0.0" and Port is "8080", address will be "0.0.0.0:8080".
+	// address is a string that represents the server address.
+	// It is constructed by combining the server host and port from the configuration.
 	address := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
 
-	// Start the Fiber server in a new goroutine. This allows the main goroutine to continue
-	// executing, specifically to set up signal handling for graceful shutdown.
+	// A new goroutine is started to run the Fiber server.
+	// This allows the main goroutine to continue and handle graceful shutdown.
 	go func() {
-		// Listen for incoming HTTP requests on the specified address.
+		// server.Listen() starts the HTTP server and listens for incoming requests on the specified address.
 		if err := server.Listen(address); err != nil {
-			// If the server encounters an error that prevents it from starting or continuing,
-			// log the error and terminate the application using log.Panicf.
+			// If an error occurs while starting the server, log the error and panic.
 			log.Panicf("Server error: %v", err)
 		}
 	}()
 
-	// Create a buffered channel of type os.Signal with a capacity of 1.
-	// This channel will be used to receive notifications about operating system signals.
+	// c is a channel that will receive operating system signals.
+	// It has a buffer size of 1.
 	c := make(chan os.Signal, 1)
-	// Register the channel 'c' to receive notifications for specific OS signals:
-	// os.Interrupt (typically Ctrl+C) and syscall.SIGTERM (a termination signal).
+	// signal.Notify() registers the given channel to receive notifications of the specified signals.
+	// In this case, it listens for os.Interrupt (Ctrl+C) and syscall.SIGTERM.
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	// Block the main goroutine until a signal is received on the channel 'c'.
-	// This effectively keeps the application running until an interrupt or terminate signal is sent.
+	// This is a blocking call that waits for a signal to be received on the channel c.
 	<-c
 
-	// Print a message to the console indicating that the application is starting its graceful shutdown process.
+	// A message is printed to the console to indicate that the server is shutting down.
 	fmt.Println("Gracefully shutting down...")
-	// Attempt to gracefully shut down the Fiber server. This allows ongoing requests to complete
-	// and prevents new connections, ensuring a clean exit. The error is ignored with '_'.
+	// server.Shutdown() gracefully shuts down the server without interrupting any active connections.
 	_ = server.Shutdown()
 
-	// Print a message indicating that cleanup tasks, such as closing database connections, are being performed.
+	// A message is printed to the console to indicate that cleanup tasks are running.
 	fmt.Println("Running cleanup tasks...")
-	// Attempt to close the database connection. This releases database resources and ensures
-	// that no open connections are left behind. The error is ignored with '_'.
+	// db.Close() closes the database connection.
 	_ = db.Close()
 
-	// Print a final message confirming that the Fiber application has been successfully shut down.
+	// A message is printed to the console to indicate that the server has shut down successfully.
 	fmt.Println("Fiber was successful shutdown.")
 }

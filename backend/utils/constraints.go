@@ -1,23 +1,20 @@
+// This file defines constant values used throughout the application.
 package utils
 
+// const is a keyword that declares a constant value.
 const (
-	// UserTableName defines the constant string for the name of the 'users' table in the database.
-	// This constant ensures consistency when referencing the users table across different parts of the application,
-	// reducing the risk of typos and making schema changes easier to manage.
+	// UserTableName is the name of the users table in the database.
 	UserTableName = "users"
-	// UserTableSchema defines the constant string representing the column names for the 'users' table.
-	// This schema is used in SQL INSERT statements to specify the order and names of the columns being populated,
-	// ensuring data integrity and correct mapping between application data structures and database columns.
+	// UserTableSchema is the schema of the users table in the database.
 	UserTableSchema = "id, name, email, image, password, jwt, created_at, updated_at"
 
-	// JWTTableName defines the constant string for the name of the 'jwt_tokens' table in the database.
-	// This table is typically used to store JSON Web Tokens, often for session management or blacklisting.
+	// JWTTableName is the name of the jwt_tokens table in the database.
 	JWTTableName = "jwt_tokens"
-	// JWTTableSchema defines the constant string representing the column names for the 'jwt_tokens' table.
-	// This schema specifies the structure of the JWT storage, including the token itself and its expiration time,
-	// which is crucial for validating and managing user sessions.
+	// JWTTableSchema is the schema of the jwt_tokens table in the database.
 	JWTTableSchema = "id, token, expires_at"
 
-	TodoTableName   = "todos"
+	// TodoTableName is the name of the todos table in the database.
+	TodoTableName = "todos"
+	// TodoTableSchema is the schema of the todos table in the database.
 	TodoTableSchema = "id, title, completed, owner, created_at"
 )

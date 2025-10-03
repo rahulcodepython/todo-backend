@@ -1,47 +1,65 @@
+// This file provides functionality for creating JSON Web Tokens (JWTs).
 package utils
 
+// "time" provides functions for working with time. It is used here to set the expiration time of the JWT.
 import (
-	"time" // Import the "time" package to handle time-related operations, such as setting token expiration.
+	"time"
 
-	"github.com/golang-jwt/jwt/v5"                           // Import the "jwt" package from "github.com/golang-jwt/jwt/v5" for JSON Web Token (JWT) creation and signing.
-	"github.com/rahulcodepython/todo-backend/backend/config" // Import the "config" package to access application-wide configurations, particularly JWT settings.
+	// "github.com/golang-jwt/jwt/v5" is a package for creating and signing JWTs.
+	"github.com/golang-jwt/jwt/v5"
+	// "github.com/rahulcodepython/todo-backend/backend/config" is a local package that provides access to application configuration, including JWT settings.
+	"github.com/rahulcodepython/todo-backend/backend/config"
 )
 
+// Token represents the structure of a JWT.
 type Token struct {
-	Token     string    `json:"token"`      // Define the 'Token' field, which will hold the actual JWT string, and tag it for JSON serialization.
-	ExpiresAt time.Time `json:"expires_at"` // Define the 'ExpiresAt' field, a time.Time object indicating when the token expires, and tag it for JSON serialization.
+	// Token is the JWT string.
+	// json:"token" specifies that this field should be marshalled to/from a JSON object with the key "token".
+	Token string `json:"token"`
+	// ExpiresAt is the time when the token expires.
+	// json:"expires_at" specifies that this field should be marshalled to/from a JSON object with the key "expires_at".
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
-// CreateToken generates a new JWT for a given user ID and application configuration.
-// It constructs a JWT with specific claims (user ID, expiration, issued at time) and signs it.
+// CreateToken generates a new JWT for a given user ID.
+// It takes a user ID and the application configuration as input.
+// It returns a pointer to a Token struct containing the JWT and its expiration time, or nil if an error occurs.
 //
-// Parameters:
-// - userId: A string representing the unique identifier of the user for whom the token is being created.
-// - cfg: A pointer to the application's configuration struct, containing JWT secret and expiration settings.
-//
-// Returns:
-// - *Token: A pointer to a Token struct containing the generated JWT string and its expiration time, or nil if an error occurs during token signing.
+// @param userId string - The ID of the user for whom the token is being created.
+// @param cfg *config.Config - A pointer to the application's configuration struct.
+// @return *Token - A pointer to a Token struct, or nil if an error occurs.
 func CreateToken(userId string, cfg *config.Config) *Token {
-	// Initialize a new Token struct.
+	// token is a new instance of the Token struct.
 	token := Token{
-		Token:     "",                              // Initialize the token string as empty; it will be populated after signing.
-		ExpiresAt: time.Now().Add(cfg.JWT.Expires), // Calculate the token's expiration time by adding the configured JWT expiry duration to the current time.
+		// The Token field is initialized as an empty string.
+		Token: "",
+		// The ExpiresAt field is set to the current time plus the configured JWT expiration duration.
+		ExpiresAt: time.Now().Add(cfg.JWT.Expires),
 	}
 
-	// Create a map of claims to be included in the JWT payload.
+	// claims is a map that holds the JWT claims.
 	claims := jwt.MapClaims{
-		"user_id": userId,                                 // Set the "user_id" claim to the provided user's identifier.
-		"exp":     time.Now().Add(cfg.JWT.Expires).Unix(), // Set the "exp" (expiration time) claim as a Unix timestamp.
-		"iat":     time.Now().Unix(),                      // Set the "iat" (issued at time) claim as a Unix timestamp.
+		// "user_id" is a claim that stores the user's ID.
+		"user_id": userId,
+		// "exp" is a claim that stores the expiration time of the token as a Unix timestamp.
+		"exp": time.Now().Add(cfg.JWT.Expires).Unix(),
+		// "iat" is a claim that stores the time the token was issued as a Unix timestamp.
+		"iat": time.Now().Unix(),
 	}
 
-	// Create a new JWT token instance using the HS256 signing method and the defined claims.
+	// tokenClaims is a new JWT token with the specified signing method and claims.
 	tokenClaims := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := tokenClaims.SignedString([]byte(cfg.JWT.SecretKey)) // Sign the token using the configured JWT secret key, converting it to a byte slice.
+	// tokenString is the signed JWT string.
+	// tokenClaims.SignedString() signs the token with the configured JWT secret key.
+	tokenString, err := tokenClaims.SignedString([]byte(cfg.JWT.SecretKey))
+	// This checks if an error occurred while signing the token.
 	if err != nil {
+		// If an error occurs, return nil.
 		return nil
 	}
 
+	// The Token field of the token struct is set to the signed token string.
 	token.Token = tokenString
+	// A pointer to the token struct is returned.
 	return &token
 }

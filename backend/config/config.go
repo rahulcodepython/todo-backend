@@ -1,157 +1,156 @@
+// This file defines the configuration for the application.
 package config
 
+// "log" provides a simple logging package. It is used here to log messages related to configuration.
 import (
-	"log"     // Import the "log" package for logging messages, especially fatal errors during configuration loading.
-	"os"      // Import the "os" package to access environment variables.
-	"strconv" // Import the "strconv" package to convert string values from environment variables to other types (e.g., int).
-	"time"    // Import the "time" package to handle time-related operations, specifically for JWT expiration duration.
+	"log"
+	// "os" provides a platform-independent interface to operating system functionality. It is used here to access environment variables.
+	"os"
+	// "strconv" provides functions for converting strings to other types. It is used here to convert the database port and JWT expiry to integers.
+	"strconv"
+	// "time" provides functions for working with time. It is used here to set the JWT expiration duration.
+	"time"
 
-	"github.com/joho/godotenv" // Import the "godotenv" package to load environment variables from a .env file.
+	// "github.com/joho/godotenv" is a package for loading environment variables from a .env file.
+	"github.com/joho/godotenv"
 )
 
-// ServerConfig defines the structure for server-related configuration settings.
+// ServerConfig defines the structure for server-related configuration.
 type ServerConfig struct {
-	// Port specifies the port number on which the server will listen for incoming requests.
+	// Port is the port on which the server will listen.
 	Port string
-	// Host specifies the host address (e.g., IP address or domain name) on which the server will bind.
+	// Host is the host of the server.
 	Host string
 }
 
-// DatabaseConfig defines the structure for database connection configuration settings.
+// DatabaseConfig defines the structure for database-related configuration.
 type DatabaseConfig struct {
-	// DBHost specifies the hostname or IP address of the database server.
+	// DBHost is the host of the database.
 	DBHost string
-	// DBPort specifies the port number on which the database server is listening.
+	// DBPort is the port of the database.
 	DBPort int
-	// DBUser specifies the username used to authenticate with the database.
+	// DBUser is the username for the database.
 	DBUser string
-	// DBPassword specifies the password used to authenticate with the database.
+	// DBPassword is the password for the database.
 	DBPassword string
-	// DBName specifies the name of the database to connect to.
+	// DBName is the name of the database.
 	DBName string
-	// DBSSLMode specifies the SSL mode for the database connection (e.g., "disable", "require").
+	// DBSSLMode is the SSL mode for the database connection.
 	DBSSLMode string
 }
 
-// JWTConfig defines the structure for JSON Web Token (JWT) related configuration settings.
+// JWTConfig defines the structure for JWT-related configuration.
 type JWTConfig struct {
-	// SecretKey specifies the secret key used for signing and verifying JWTs.
+	// SecretKey is the secret key used for signing JWTs.
 	SecretKey string
-	// Expires specifies the duration for which a generated JWT will be valid.
+	// Expires is the duration for which a JWT is valid.
 	Expires time.Duration
 }
 
-// CORSConfig defines the structure for Cross-Origin Resource Sharing (CORS) related configuration settings.
+// CORSConfig defines the structure for CORS-related configuration.
 type CORSConfig struct {
-	// CorsOrigins specifies a comma-separated list of allowed origins for CORS requests.
+	// CorsOrigins is a comma-separated list of allowed origins for CORS requests.
 	CorsOrigins string
 }
 
 // Config is the main configuration struct that aggregates all other configuration types.
-// It holds all the application-wide settings loaded from environment variables.
 type Config struct {
-	// Environment specifies the current operating environment of the application (e.g., "dev", "prod").
+	// Environment is the environment in which the application is running.
 	Environment string
-	// Server holds the server-specific configuration settings.
+	// Server holds the server-specific configuration.
 	Server ServerConfig
-	// Database holds the database-specific configuration settings.
+	// Database holds the database-specific configuration.
 	Database DatabaseConfig
-	// JWT holds the JWT-specific configuration settings.
+	// JWT holds the JWT-specific configuration.
 	JWT JWTConfig
-	// CORS holds the CORS-specific configuration settings.
+	// CORS holds the CORS-specific configuration.
 	CORS CORSConfig
 }
 
-// HandleMissingEnvValues retrieves an environment variable's value or returns a default if it's not set.
-// It also logs a warning if the environment variable is missing and a default is used.
+// HandleMissingEnvValues retrieves the value of an environment variable or returns a default value if it is not set.
+// It takes the name of the environment variable and a default value as input.
 //
-// Parameters:
-// - envName: The name of the environment variable to retrieve.
-// - defaultValue: The default value to use if the environment variable is not found or is empty.
-//
-// Returns:
-// - A string containing the environment variable's value or the provided default value.
+// @param envName string - The name of the environment variable.
+// @param defaultValue string - The default value to be returned if the environment variable is not set.
+// @return string - The value of the environment variable or the default value.
 func HandleMissingEnvValues(envName string, defaultValue string) string {
-	// Get the value of the environment variable specified by `envName`.
+	// envValue is the value of the environment variable.
 	envValue := os.Getenv(envName)
-	// Check if the retrieved environment variable value is empty.
+	// This checks if the environment variable is empty.
 	if envValue == "" {
-		// If it's empty, log a message indicating that the environment variable is missing and a default is being used.
+		// If the environment variable is empty, a warning is logged.
 		log.Printf("%s is missing, default value is set.", envName)
-		// Return the provided `defaultValue`.
+		// The default value is returned.
 		return defaultValue
 	}
-	// If the environment variable has a value, return it.
+	// The value of the environment variable is returned.
 	return envValue
 }
 
-// LoadConfig loads all application configurations from environment variables, potentially from a .env file.
-// It parses and validates these values, providing defaults where necessary, and returns a pointer to a Config struct.
+// LoadConfig loads the application configuration from environment variables.
+// It returns a pointer to a Config struct.
 //
-// Returns:
-// - *Config: A pointer to the fully populated Config struct.
+// @return *Config - A pointer to the Config struct.
 func LoadConfig() *Config {
-	// Load environment variables from a .env file. This allows for easy configuration management in development.
+	// err is the result of loading the .env file.
 	err := godotenv.Load()
-	// Check if there was an error loading the .env file.
+	// This checks if an error occurred while loading the .env file.
 	if err != nil {
-		// If an error occurs, log a fatal message and exit the application, as configuration is critical.
+		// If an error occurs, a fatal error is logged.
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	// Retrieve the database port from environment variables, using "5432" as a default.
+	// dbPort is the port of the database.
 	dbPort, err := strconv.Atoi(HandleMissingEnvValues("DB_PORT", "5432"))
-	// Check if there was an error converting the DB_PORT string to an integer.
+	// This checks if an error occurred while converting the database port to an integer.
 	if err != nil {
-		// Log a fatal error if the DB_PORT environment variable cannot be converted to an integer.
+		// If an error occurs, a fatal error is logged.
 		log.Fatalf("Error parsing DB_PORT: %v", err)
 	}
 
-	// Retrieve the JWT expiry hours from environment variables, using "24" as a default.
-	// This value determines how long JWTs will be valid.
+	// expiry is the JWT expiration duration in hours.
 	expiry, err := strconv.Atoi(HandleMissingEnvValues("JWT_EXPIRY_HOURS", "24"))
-	// Check if there was an error converting the JWT_EXPIRY_HOURS string to an integer.
+	// This checks if an error occurred while converting the JWT expiry to an integer.
 	if err != nil {
-		// Log a fatal error if the JWT_EXPIRY_HOURS environment variable cannot be converted to an integer.
+		// If an error occurs, a fatal error is logged.
 		log.Fatalf("Error parsing JWT_EXPIRY_HOURS: %v", err)
 	}
 
-	// Return a new Config struct populated with values from environment variables or their defaults.
+	// A pointer to a new Config struct is returned.
 	return &Config{
-		// Set the application environment, using "dev" as default if "ENV" is not specified.
+		// The Environment field is set to the value of the "ENV" environment variable, or "dev" if it is not set.
 		Environment: HandleMissingEnvValues("ENV", "dev"),
-		// Populate the ServerConfig struct.
+		// The Server field is populated with the server configuration.
 		Server: ServerConfig{
-			// Set the server port, using "8000" as default if "PORT" is not specified.
+			// The Port field is set to the value of the "PORT" environment variable, or "8000" if it is not set.
 			Port: HandleMissingEnvValues("PORT", "8000"),
-			// Set the server host, using "localhost" as default if "HOST" is not specified.
+			// The Host field is set to the value of the "HOST" environment variable, or "localhost" if it is not set.
 			Host: HandleMissingEnvValues("HOST", "localhost"),
 		},
-		// Populate the DatabaseConfig struct.
+		// The Database field is populated with the database configuration.
 		Database: DatabaseConfig{
-			// Set the database host, using "localhost" as default.
+			// The DBHost field is set to the value of the "DB_HOST" environment variable, or "localhost" if it is not set.
 			DBHost: HandleMissingEnvValues("DB_HOST", "localhost"),
-			// Set the database port, using the parsed integer value or its default.
+			// The DBPort field is set to the value of the dbPort variable.
 			DBPort: dbPort,
-			// Set the database user, using "postgres" as default.
+			// The DBUser field is set to the value of the "DB_USER" environment variable, or "postgres" if it is not set.
 			DBUser: HandleMissingEnvValues("DB_USER", "postgres"),
-			// Set the database password, using "postgres" as default.
+			// The DBPassword field is set to the value of the "DB_PASSWORD" environment variable, or "postgres" if it is not set.
 			DBPassword: HandleMissingEnvValues("DB_PASSWORD", "postgres"),
-			// Set the database name, using "postgres" as default.
-			DBName: HandleMissingEnvValues("DB_NAME", "postgres"),
-			// Set the database SSL mode, using "disable" as default.
+			// The DBName field is set to the value of the "DB_NAME" environment variable, or "postgres" if it is not set.
+			DBName:    HandleMissingEnvValues("DB_NAME", "postgres"), // The DBSSLMode field is set to the value of the `DB_SSLMODE` environment variable, or `disable` if it is not set.
 			DBSSLMode: HandleMissingEnvValues("DB_SSLMODE", "disable"),
 		},
-		// Populate the JWTConfig struct.
+		// The JWT field is populated with the JWT configuration.
 		JWT: JWTConfig{
-			// Set the JWT secret key, using a strong default if "JWT_SECRET_KEY" is not specified.
+			// The SecretKey field is set to the value of the "JWT_SECRET_KEY" environment variable, or a default value if it is not set.
 			SecretKey: HandleMissingEnvValues("JWT_SECRET_KEY", "vCYKhw6zTyXIt7ckaKNnv7KarP2wzhZegyoxLLiK6MGKTnVo9z"),
-			// Calculate the JWT expiration duration based on the parsed hours.
+			// The Expires field is set to the JWT expiration duration.
 			Expires: time.Hour * time.Duration(expiry),
 		},
-		// Populate the CORSConfig struct.
+		// The CORS field is populated with the CORS configuration.
 		CORS: CORSConfig{
-			// Set the allowed CORS origins, using "http://localhost:3000" as default.
+			// The CorsOrigins field is set to the value of the "CORS_ORIGINS" environment variable, or "http://localhost:3000" if it is not set.
 			CorsOrigins: HandleMissingEnvValues("CORS_ORIGINS", "http://localhost:3000"),
 		},
 	}

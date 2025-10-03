@@ -1,51 +1,41 @@
+// This file provides utility functions for password encryption and comparison.
 package utils
 
+// "golang.org/x/crypto/bcrypt" provides functions for hashing and comparing passwords using the bcrypt algorithm.
 import (
-	// Import the bcrypt package from golang.org/x/crypto/bcrypt for secure password hashing.
-	// bcrypt is a password hashing function designed to be computationally intensive,
-	// making brute-force attacks more difficult.
 	"golang.org/x/crypto/bcrypt"
 )
 
-// EncryptPassword takes a plain-text string (typically a password) and hashes it using the bcrypt algorithm.
-// This function is crucial for securely storing sensitive data like passwords, as it prevents
-// direct storage of the plain text, even if the database is compromised.
+// EncryptPassword hashes a password using the bcrypt algorithm.
+// It takes a plain-text password as input and returns the hashed password and an error.
 //
-// Parameters:
-// - password: The string to be encrypted (e.g., a user's password).
-//
-// Returns:
-// - A string representing the bcrypt hash of the input data.
-// - An error if the hashing process fails.
+// @param password string - The plain-text password to be hashed.
+// @return string - The hashed password.
+// @return error - An error if one occurred during the hashing process.
 func EncryptPassword(password string) (string, error) {
-	// GenerateFromPassword hashes the password using a cost factor of 10.
-	// The cost factor determines how computationally expensive the hashing process is;
-	// a higher cost factor makes it harder for attackers to crack hashes.
+	// encryptedPassword is the hashed password.
+	// bcrypt.GenerateFromPassword() hashes the password with a cost of 10.
 	encryptedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	// This checks if an error occurred while hashing the password.
 	if err != nil {
-		// If an error occurs during hashing, return an empty string and the error.
+		// If an error occurs, return an empty string and the error.
 		return "", err
 	}
 
-	// Convert the byte slice hash to a string and return it.
+	// The hashed password is converted to a string and returned.
 	return string(encryptedPassword), nil
 }
 
-// CompareEncryptedPassword compares a plain-text password with a bcrypt-hashed password.
-// This function is used during user authentication to verify if the provided password
-// matches the stored hash without ever needing to decrypt the hash.
+// CompareEncryptedPassword compares a hashed password with a plain-text password.
+// It takes a hashed password and a plain-text password as input and returns a boolean indicating whether they match.
 //
-// Parameters:
-// - encryptedPassword: The bcrypt hash retrieved from storage (e.g., from a database).
-// - password: The plain-text password provided by the user during login.
-//
-// Returns:
-// - true if the plain-text password matches the hashed password, indicating successful authentication.
-// - false if they do not match or if an error occurs during the comparison.
+// @param encryptedPassword string - The hashed password.
+// @param password string - The plain-text password.
+// @return bool - True if the passwords match, false otherwise.
 func CompareEncryptedPassword(encryptedPassword, password string) bool {
-	// CompareHashAndPassword compares a bcrypt hash with a plain-text password.
-	// It returns nil if the password and hash match, and an error otherwise.
+	// err is the result of comparing the hashed password with the plain-text password.
+	// bcrypt.CompareHashAndPassword() compares a hashed password with its possible plaintext equivalent.
 	err := bcrypt.CompareHashAndPassword([]byte(encryptedPassword), []byte(password))
-	// Return true if err is nil (meaning the passwords match), otherwise return false.
+	// The function returns true if the error is nil, indicating that the passwords match.
 	return err == nil
 }

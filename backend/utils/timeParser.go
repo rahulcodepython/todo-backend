@@ -1,17 +1,16 @@
+// This file provides a utility function for parsing time.
 package utils
 
+// "time" provides functions for working with time. It is used here to format a time.Time object.
 import "time"
 
-// ParseTime formats a given time.Time object into a string representation
-// using the RFC3339 format. This format is a common standard for representing
-// dates and times in internet protocols and is often used in APIs for consistency.
+// ParseTime formats a time.Time object into an RFC3339 string.
+// RFC3339 is a standard format for representing dates and times.
 //
-// Parameters:
-// - t: The time.Time object to be formatted.
-//
-// Returns:
-// - A string representing the formatted time in RFC3339 layout.
-// RFC3339 = "2006-01-02T15:04:05Z07:00"
+// @param t time.Time - The time.Time object to be formatted.
+// @return string - The formatted time string.
 func ParseTime(t time.Time) string {
+	// t.Format() returns a textual representation of the time value formatted according to the layout defined by the argument.
+	// time.RFC3339 is a predefined layout for RFC3339 format.
 	return t.Format(time.RFC3339)
 }
