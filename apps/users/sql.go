@@ -46,4 +46,4 @@ var CreateNewJWT_UpdateUserRowQuery = fmt.Sprintf("WITH new_token AS (INSERT INT
 // on the 'jwt' column of the 'users' table and the 'id' column of the 'jwt_tokens' table.
 // This query is used to fetch user details when only the JWT ID is known, typically after authentication.
 // It expects 1 parameter for the JWT ID.
-var GetUserProfileByJWTQuery = fmt.Sprintf("SELECT id, name, email, image, created_at, updated_at FROM %s WHERE jwt = $1", utils.UserTableName)
+var GetUserProfileByJWTQuery = fmt.Sprintf("SELECT %s FROM %s WHERE jwt = $1", utils.UserTableSchema, utils.UserTableName)

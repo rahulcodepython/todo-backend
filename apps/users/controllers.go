@@ -59,17 +59,6 @@ func CreateNewJWTAndUpdateUser(user User, uc *UserControl, c *fiber.Ctx) (JWT, e
 	return jwt, nil
 }
 
-func ParseJWT(c *fiber.Ctx) (JWT, bool) {
-	jwtInterface := c.Locals("jwt")
-	if jwtInterface == nil {
-		return JWT{}, false
-	}
-
-	jwt, ok := jwtInterface.(JWT)
-
-	return jwt, ok
-}
-
 // RegisterUserController handles the logic for new user registration.
 func (uc *UserControl) RegisterUserController(c *fiber.Ctx) error {
 	// Allocate memory for a new 'registerUserRequest' struct to hold the request body data.
@@ -250,13 +239,12 @@ func (uc *UserControl) LoginUserController(c *fiber.Ctx) error {
 	return response.OKResponse(c, "User logged in successfully", responseUser)
 }
 
+// LogoutUserController handles user logout by invalidating their JWT.
+// This controller only needs JWT data (no user data required).
+// Uses: c.Locals("jwt")
 func (uc *UserControl) LogoutUserController(c *fiber.Ctx) error {
-	jwt, ok := ParseJWT(c)
-	if !ok {
-		return response.InternelServerError(c, nil, "Invalid JWT type in context")
-	}
+	jwt := c.Locals("jwt").(JWT)
 
-	// Delete JWT from database
 	_, err := uc.db.Exec(DeleteJWTByIdQuery, jwt.ID)
 	if err != nil {
 		return response.InternelServerError(c, err, "Error deleting JWT")
@@ -266,27 +254,6 @@ func (uc *UserControl) LogoutUserController(c *fiber.Ctx) error {
 }
 
 func (uc *UserControl) UserProfileController(c *fiber.Ctx) error {
-	jwt, ok := ParseJWT(c)
-	if !ok {
-		return response.InternelServerError(c, nil, "Invalid JWT type in context")
-	}
-
-	var user User
-	err := uc.db.QueryRow(GetUserProfileByJWTQuery, jwt.ID).Scan(
-		&user.ID,
-		&user.Name,
-		&user.Email,
-		&user.Image,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return response.NotFound(c, err, "User not found")
-		}
-		return response.InternelServerError(c, err, "Error fetching user profile")
-	}
-
+	user := c.Locals("user").(User)
 	return response.OKResponse(c, "User profile fetched successfully", user)
 }

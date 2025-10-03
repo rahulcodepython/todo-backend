@@ -17,6 +17,9 @@ func Router(app *fiber.App, cfg *config.Config, db *sql.DB) {
 	app.Use(middleware.Cors(cfg))
 	app.Use(middleware.Logger(cfg))
 
+	authMiddleware := middleware.Authenticated(db)
+	authenticatedUserMiddleware := middleware.AuthenticatedUser(db)
+
 	// Create API group
 	api := app.Group("/api/v1")
 
@@ -36,9 +39,7 @@ func Router(app *fiber.App, cfg *config.Config, db *sql.DB) {
 	auth.Post("/register", userController.RegisterUserController)
 	auth.Post("/login", userController.LoginUserController)
 
-	// CRITICAL: Initialize middleware ONCE before using it
-	authMiddleware := middleware.Authenticated(db)
 	// Protected routes
 	auth.Get("/logout", authMiddleware, userController.LogoutUserController)
-	auth.Get("/profile", authMiddleware, userController.UserProfileController)
+	auth.Get("/profile", authMiddleware, authenticatedUserMiddleware, userController.UserProfileController)
 }
