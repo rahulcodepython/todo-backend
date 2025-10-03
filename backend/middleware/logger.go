@@ -22,6 +22,6 @@ func Logger(cfg *config.Config) fiber.Handler {
 		// This string uses placeholders (e.g., ${protocol}, ${ip}, ${status}) that Fiber's logger
 		// will replace with actual request and response details for each incoming HTTP request.
 		// The "\n" at the end ensures each log entry is on a new line for readability.
-		Format: "${protocol}://${ip}:${port} ${status} - ${method} ${path} [${time}]\n",
+		Format: "[${time}] ${protocol}://${ip}:${port} - ${method} : ${status} | ${path} | ${latency} \n",
 	})
 }

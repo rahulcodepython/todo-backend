@@ -2,11 +2,13 @@ package middleware
 
 import (
 	"database/sql" // Import the "database/sql" package to interact with SQL databases.
-	"strings"      // Import the "strings" package to perform string manipulation, specifically for splitting the Authorization header.
-	"time"         // Import the "time" package to handle time-related operations, such as checking token expiration.
+	"log"
+	"strings" // Import the "strings" package to perform string manipulation, specifically for splitting the Authorization header.
+	"time"    // Import the "time" package to handle time-related operations, such as checking token expiration.
 
 	"github.com/gofiber/fiber/v2"                        // Import the Fiber web framework, which provides the core functionalities for building web applications in Go.
 	"github.com/rahulcodepython/todo-backend/apps/users" // Import the "users" package from the application's "apps" directory, specifically to use the `users.JWT` struct.
+	"github.com/rahulcodepython/todo-backend/backend/response"
 )
 
 // Authenticated is a Fiber middleware function that checks if an incoming request is authenticated.
@@ -19,33 +21,23 @@ import (
 // If any check fails, it returns an appropriate HTTP status code and a JSON error response, preventing further processing.
 // It takes a database connection (`*sql.DB`) as a parameter to query the `jwt_tokens` table.
 func Authenticated(db *sql.DB) fiber.Handler {
+	log.Println("Authenticated middleware initialized")
 	// Return a Fiber handler function that will be executed for each incoming request.
 	return func(c *fiber.Ctx) error {
 		// Retrieve the "Authorization" header from the incoming request.
 		authorization := c.Get("Authorization")
 		// Check if the Authorization header is empty.
-		if authorization == "" {
-			// If it's empty, return an Unauthorized status (401) with a JSON error message.
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"success": false,                 // Indicate that the operation was not successful.
-				"message": "Unauthorized Access", // Provide a descriptive error message.
-			})
+
+		authorizationParts := strings.Split(authorization, " ")
+
+		// Check if the header has at least 2 parts: "Bearer" and "token"
+		if len(authorizationParts) != 2 || authorizationParts[0] != "Bearer" {
+			return response.UnauthorizedAccess(c, nil, "Invalid Authorization header format. Expected 'Bearer <token>'")
 		}
 
-		// Split the Authorization header value by space to separate the token type (Bearer) from the actual token.
-		authorizationParts := strings.Split(authorization, " ")
-		// Extract the token type (e.g., "Bearer").
-		header := string(authorizationParts[0])
-		// Extract the actual JWT token.
-		token := string(authorizationParts[1])
-
-		// Check if the token type is "Bearer". If not, it's an invalid authorization scheme.
-		if header != "Bearer" {
-			// Return an Unauthorized status (401) with a JSON error message.
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"success": false,                 // Indicate that the operation was not successful.
-				"message": "Unauthorized Access", // Provide a descriptive error message.
-			})
+		token := authorizationParts[1]
+		if token == "" {
+			return response.UnauthorizedAccess(c, nil, "Token is missing")
 		}
 
 		var count int     // Declare a variable to store the count of matching tokens found in the database.
@@ -58,42 +50,28 @@ func Authenticated(db *sql.DB) fiber.Handler {
 		// Check for any database errors during the query execution.
 		if err != nil {
 			// If an error occurs, return an Internal Server Error status (500) with a JSON error message and the actual error.
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"success": false,                   // Indicate that the operation was not successful.
-				"message": "Internal Server Error", // Provide a generic error message for internal issues.
-				"error":   err.Error(),             // Include the specific database error for debugging.
-			})
+			return response.InternelServerError(c, err, "Internal Server Error")
 		}
 
 		// After scanning, check if `count` is 0, meaning no matching token was found in the database.
 		if count == 0 {
 			// If no token is found, return an Unauthorized status (401) with a JSON error message.
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"success": false,                 // Indicate that the operation was not successful.
-				"message": "Unauthorized Access", // Provide a descriptive error message.
-			})
+			return response.UnauthorizedAccess(c, nil, "Unauthorized Access")
 		}
 
 		// Check if the retrieved token's expiration time is before the current time.
 		if jwt.ExpiresAt.Before(time.Now()) {
 			// If the token has expired, delete it from the `jwt_tokens` table to clean up expired tokens.
-			_, err := db.Exec("DELETE FROM jwt_tokens WHERE id = $1", jwt.ID)
+			_, err := db.Exec(users.DeleteJWTByIdQuery, jwt.ID)
 			// Check for any database errors during the deletion.
 			if err != nil {
 				// If an error occurs during deletion, return an Internal Server Error status (500) with a JSON error message.
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"success": false,                   // Indicate that the operation was not successful.
-					"message": "Internal Server Error", // Provide a generic error message for internal issues.
-					"error":   err.Error(),             // Include the specific database error for debugging.
-				})
+				return response.InternelServerError(c, err, "Internal Server Error")
 			}
 
 			// After deleting the expired token, return an Unauthorized status (401) with a specific message
 			// indicating that the token has expired and the user needs to log in again.
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"success": false,                                    // Indicate that the operation was not successful.
-				"message": "Token has expired. Please login again.", // Inform the user about the token expiration.
-			})
+			return response.UnauthorizedAccess(c, nil, "Token has expired. Please login again.")
 		}
 
 		// If the token is valid and not expired, store the `jwt` struct in Fiber's locals context.

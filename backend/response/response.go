@@ -1,8 +1,9 @@
 package response
 
 import (
-	"github.com/gofiber/fiber/v2"                           // Import the Fiber web framework, which provides the core functionalities for building web applications in Go.
-	"github.com/rahulcodepython/todo-backend/backend/utils" // Import the application's utility package, specifically for the `Response` struct.
+	"github.com/gofiber/fiber/v2" // Import the Fiber web framework, which provides the core functionalities for building web applications in Go.
+	"github.com/rahulcodepython/todo-backend/backend/utils"
+	// Import the application's utility package, specifically for the `Response` struct.
 )
 
 // InternelServerError constructs and sends a 500 Internal Server Error response.
@@ -138,5 +139,12 @@ func OKResponse(c *fiber.Ctx, message string, data interface{}) error {
 		Success: true,    // Indicate that the operation was successful.
 		Message: message, // Include the success message.
 		Data:    data,    // Include the actual data payload.
+	})
+}
+
+func TooManyRequests(c *fiber.Ctx, message string) error {
+	return c.Status(fiber.StatusTooManyRequests).JSON(utils.Response{
+		Success: false,
+		Message: message,
 	})
 }

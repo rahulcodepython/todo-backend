@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"                            // Import the Fiber web framework, which provides the core functionalities for building web applications in Go.
 	"github.com/gofiber/fiber/v2/middleware/limiter"         // Import the Fiber rate limiter middleware, which controls the rate of incoming requests.
 	"github.com/rahulcodepython/todo-backend/backend/config" // Import the application's configuration package to access server-related settings.
+	"github.com/rahulcodepython/todo-backend/backend/response"
 )
 
 // GeneralAPILimiter creates a rate limiting middleware for general API endpoints.
@@ -24,10 +25,7 @@ func GeneralAPILimiter(cfg *config.Config) fiber.Handler {
 		// It constructs and sends an appropriate HTTP response to the client.
 		LimitReached: func(c *fiber.Ctx) error {
 			// Set the HTTP status code to 429 (Too Many Requests) to indicate that the client has sent too many requests in a given amount of time.
-			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"status":  "fail",                                                  // A status field indicating the request failed due to rate limiting.
-				"message": "Too many requests, please try again after one minute.", // A user-friendly message explaining the rate limit.
-			})
+			return response.TooManyRequests(c, "Too many requests, please try again after one minute.")
 		},
 		// Next is a function that determines whether the middleware should be skipped for the current request.
 		// In this configuration, the rate limiter is skipped if the client's IP address matches the server's host IP.
@@ -51,10 +49,7 @@ func StrictSecurityLimiter(cfg *config.Config) fiber.Handler {
 		// It provides a specific message indicating a security-related block.
 		LimitReached: func(c *fiber.Ctx) error {
 			// Set the HTTP status code to 429 (Too Many Requests) to indicate that the client has sent too many requests.
-			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
-				"status":  "fail",                                                             // A status field indicating the request failed due to rate limiting.
-				"message": "Too many failed attempts. This action is blocked for 10 minutes.", // A specific message for security-related rate limiting.
-			})
+			return response.TooManyRequests(c, "Too many failed attempts. This action is blocked for 10 minutes.")
 		},
 		// Next is a function that determines whether the middleware should be skipped for the current request.
 		// Similar to GeneralAPILimiter, it skips rate limiting for requests originating from the server's host IP.
