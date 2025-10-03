@@ -1,23 +1,24 @@
 package todos
 
-type CreateTodoInput struct {
-	Todo string `json:"todo" validate:"required"`
+import "github.com/google/uuid"
+
+type Create_UpdateTodoRequest struct {
+	Title string `json:"title" validate:"required,min=3,max=255"`
 }
 
-type UpdateTodoInput struct {
-	Todo string `json:"todo" validate:"required"`
+type CompleteTodoRequest struct {
+	Completed *bool `json:"completed" validate:"required"`
 }
 
 type TodoResponse struct {
-	ID        string `json:"id"`
-	Todo      string `json:"todo"`
-	Completed bool   `json:"completed"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID        uuid.UUID `json:"id"`
+	Title     string    `json:"title"`
+	Completed bool      `json:"completed"`
+	CreatedAt string    `json:"created_at"`
 }
 
 type PaginatedTodoResponse struct {
-	Data       []TodoResponse `json:"data"`
+	Results    []TodoResponse `json:"results"`
 	Count      int            `json:"count"`
 	TotalItems int64          `json:"total_items"`
 	TotalPages int            `json:"total_pages"`

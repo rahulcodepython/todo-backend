@@ -12,23 +12,25 @@ import (
 // Todo struct defines the shape of our JSON data.
 // It must match the structure the API expects.
 type Todo struct {
-	Todo string `json:"todo"`
+	Title     string `json:"title"`
+	Completed bool   `json:"completed"`
 }
 
 func api_request(id int) {
 	// --- 1. Configuration ---
 
 	// The URL of your local Fiber API endpoint
-	apiURL := "http://127.0.0.1:8000/api/v1/todos/"
+	apiURL := "http://127.0.0.1:8000/api/v1/todos/create"
 
 	// IMPORTANT: Replace this with a valid JWT token you get from your /login endpoint
-	authToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTkwNzExMTgsImlhdCI6MTc1ODk4NDcxOCwidXNlcl9pZCI6ImI1NzQyN2UwLWI2YjEtNGY2OC04ZjFjLTM4YmMzNTc1YzVhNiJ9.iUDAFUHXhKR-YiHZ4I30QvV6zS6ZcYPdYbW2pKYICoI"
+	authToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk2MTIzMDAsImlhdCI6MTc1OTUyNTkwMCwidXNlcl9pZCI6IjAxOTlhYmVhLTUzMDgtNzBhZS05ZThmLWJlNDNjODA3NWUzNyJ9.UfXJB0UT60eCkigRLK2o7HW3V9l3d0i4KL2UuGLXqO4"
 
 	// --- 2. Prepare the Request Body ---
 
 	// Create an instance of our Todo struct with the data we want to send
 	newTodo := Todo{
-		Todo: fmt.Sprintf("Complete the task %d", id),
+		Title:     fmt.Sprintf("Complete the task %d", id),
+		Completed: id%2 == 0,
 	}
 
 	// Marshal the Go struct into a JSON byte slice
@@ -90,7 +92,7 @@ func api_request(id int) {
 }
 
 func main() {
-	for i := 6; i < 50; i++ {
+	for i := 1; i <= 50; i++ {
 		api_request(i)
 	}
 }

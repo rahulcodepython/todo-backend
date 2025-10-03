@@ -1,12 +1,11 @@
 package todos
 
-import "time"
+import "github.com/google/uuid"
 
 type Todo struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	Todo      string    `json:"todo"`
+	ID        uuid.UUID `json:"id"`
+	Title     string    `json:"title"`
 	Completed bool      `json:"completed"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Owner     string    `json:"owner"`
+	CreatedAt string    `json:"created_at"`
 }

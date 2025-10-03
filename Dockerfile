@@ -26,10 +26,10 @@ COPY --from=builder /app/todo-backend .
 # Copy the production environment file
 # Note: In a real production scenario, you would manage secrets using
 # environment variables injected by your orchestration tool (e.g., Kubernetes, Docker Swarm), not by copying a .env file.
-COPY .env.prod .
+COPY .env .env
 
 # Expose the port the app runs on
-EXPOSE 8080
+EXPOSE 8000
 
 # Set the command to run the application
 # APP_ENV is set here to ensure the production environment is loaded
